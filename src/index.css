@@ -1,0 +1,242 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+
+@layer base {
+  :root {
+    /* Dark theme by default - professional studio aesthetic */
+    --background: 222 20% 8%;
+    --foreground: 210 20% 95%;
+
+    --card: 222 18% 11%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 222 18% 11%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 15% 16%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 222 15% 14%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 25 90% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 222 15% 18%;
+    --input: 222 15% 20%;
+    --ring: 25 95% 53%;
+
+    --radius: 0.5rem;
+
+    /* Cooking stage colors */
+    --prep: 142 76% 36%;
+    --prep-foreground: 142 76% 90%;
+    --prep-muted: 142 40% 20%;
+
+    --cook: 25 95% 53%;
+    --cook-foreground: 25 95% 95%;
+    --cook-muted: 25 60% 20%;
+
+    --finish: 270 60% 55%;
+    --finish-foreground: 270 60% 95%;
+    --finish-muted: 270 40% 20%;
+
+    --control: 200 80% 50%;
+    --control-foreground: 200 80% 95%;
+    --control-muted: 200 50% 20%;
+
+    /* Panel colors */
+    --panel: 222 18% 10%;
+    --panel-border: 222 15% 15%;
+    --panel-header: 222 18% 12%;
+
+    /* Canvas colors */
+    --canvas: 222 20% 6%;
+    --canvas-grid: 222 15% 12%;
+    --canvas-dot: 222 15% 18%;
+
+    /* Node styling */
+    --node-shadow: 0 4px 20px -2px hsla(0, 0%, 0%, 0.4);
+    --node-glow: 0 0 20px -5px;
+
+    /* Connection colors */
+    --connection-valid: 142 76% 50%;
+    --connection-invalid: 0 72% 51%;
+    --connection-warning: 45 93% 47%;
+
+    /* Sidebar */
+    --sidebar-background: 222 18% 9%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 15% 14%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 222 15% 15%;
+    --sidebar-ring: 25 95% 53%;
+  }
+
+  .dark {
+    /* Same as root - dark by default */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  code, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Node base styles */
+  .node-base {
+    @apply rounded-lg border shadow-lg backdrop-blur-sm transition-all duration-200;
+    box-shadow: var(--node-shadow);
+  }
+
+  .node-base:hover {
+    @apply scale-[1.02];
+  }
+
+  .node-prep {
+    @apply border-prep/50 bg-prep-muted/80;
+  }
+
+  .node-cook {
+    @apply border-cook/50 bg-cook-muted/80;
+  }
+
+  .node-finish {
+    @apply border-finish/50 bg-finish-muted/80;
+  }
+
+  .node-control {
+    @apply border-control/50 bg-control-muted/80;
+  }
+
+  /* Handle styles */
+  .handle-input {
+    @apply !w-3 !h-3 !border-2 !border-muted-foreground !bg-background transition-all duration-150;
+  }
+
+  .handle-input:hover {
+    @apply !border-primary !scale-125;
+  }
+
+  .handle-output {
+    @apply !w-3 !h-3 !border-2 !border-primary !bg-primary transition-all duration-150;
+  }
+
+  .handle-output:hover {
+    @apply !scale-125 !shadow-lg;
+  }
+
+  /* Panel styles */
+  .panel-section {
+    @apply bg-panel border-panel-border rounded-lg border;
+  }
+
+  .panel-header {
+    @apply bg-panel-header px-4 py-3 border-b border-panel-border flex items-center justify-between;
+  }
+
+  /* Category badges */
+  .category-prep {
+    @apply bg-prep/20 text-prep-foreground border-prep/30;
+  }
+
+  .category-cook {
+    @apply bg-cook/20 text-cook-foreground border-cook/30;
+  }
+
+  .category-finish {
+    @apply bg-finish/20 text-finish-foreground border-finish/30;
+  }
+
+  .category-control {
+    @apply bg-control/20 text-control-foreground border-control/30;
+  }
+
+  /* Toolbar styles */
+  .toolbar-btn {
+    @apply px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply border border-border hover:border-primary/50;
+  }
+
+  .toolbar-btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply border-primary;
+  }
+
+  /* Scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+@layer utilities {
+  .glow-prep {
+    box-shadow: var(--node-glow) hsl(var(--prep) / 0.4);
+  }
+
+  .glow-cook {
+    box-shadow: var(--node-glow) hsl(var(--cook) / 0.4);
+  }
+
+  .glow-finish {
+    box-shadow: var(--node-glow) hsl(var(--finish) / 0.4);
+  }
+
+  .glow-control {
+    box-shadow: var(--node-glow) hsl(var(--control) / 0.4);
+  }
+
+  /* Add this to your index.css or global CSS file */
+
+  @keyframes border-glow {
+    0%, 100% {
+      border-color: rgb(34 197 94 / 0.4);
+      box-shadow: 0 0 0px rgba(34, 197, 94, 0);
+    }
+    50% {
+      border-color: rgb(34 197 94 / 0.9);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+    }
+  }
+
+  .animate-border-glow {
+    animation: border-glow 3s ease-in-out infinite;
+  }
+}

