@@ -39,6 +39,7 @@ import {
   CanvasVariable,
 } from '@/types/opfor';
 import { CampaignConfig } from '@/types/campaign';
+import { saveCampaignToIndex } from '@/lib/campaignStorage';
 import { useToast } from '@/hooks/use-toast';
 import { WorkflowService } from '@/services/workflowService';
 import {
@@ -105,8 +106,48 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     }));
   }, [campaign]);
 
-  // ── JQR profile + reactive state ──────────────────────────────────────────
+  // ── JQR profile derived from campaign ─────────────────────────────────────
   const jqrProfile = campaign?.jqrProfile ?? null;
+
+  // ── Restore canvas from saved campaign state on mount ─────────────────────
+  useEffect(() => {
+    if (!campaign) return;
+    if (campaign.canvasNodes && (campaign.canvasNodes as Node[]).length > 0) {
+      setNodes(campaign.canvasNodes as Node[]);
+      hasInitialNode.current = true;
+    }
+    if (campaign.canvasEdges && (campaign.canvasEdges as Edge[]).length > 0) {
+      setEdges(campaign.canvasEdges as Edge[]);
+    }
+  }, []); // run once on mount only
+
+  // ── Save canvas state to campaign record on unmount ────────────────────────
+  useEffect(() => {
+    return () => {
+      if (!campaign || nodes.length === 0) return;
+      const tacticsCovered = [
+        ...new Set(
+          nodes
+            .map(n => (n.data as OpforNodeData).definition?.tactic)
+            .filter(Boolean) as string[]
+        ),
+      ];
+      const required    = campaign.jqrProfile?.requiredTactics ?? [];
+      const covered     = required.filter(t => tacticsCovered.includes(t)).length;
+      const jqrProgress = required.length > 0
+        ? Math.round((covered / required.length) * 100)
+        : 0;
+      saveCampaignToIndex({
+        ...campaign,
+        canvasNodes:    nodes,
+        canvasEdges:    edges,
+        nodeCount:      nodes.length,
+        tacticsCovered,
+        jqrProgress,
+        updatedAt:      new Date().toISOString(),
+      });
+    };
+  }, [nodes, edges, campaign]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Tactic filter (driven by JQR panel "+" button) ────────────────────────
   const [tacticFilter, setTacticFilter] = useState<string | null>(null);
@@ -275,15 +316,39 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     [globalSettings.operator]
   );
 
-  // Autosave every 30 seconds
+  // Autosave every 30 seconds — syncs canvas state back to campaign record
   useEffect(() => {
     const interval = setInterval(() => {
       if (nodes.length > 0) {
         WorkflowService.autosave(nodes, edges, globalSettings, getViewport());
+
+        if (campaign) {
+          const tacticsCovered = [
+            ...new Set(
+              nodes
+                .map(n => (n.data as OpforNodeData).definition?.tactic)
+                .filter(Boolean) as string[]
+            ),
+          ];
+          const required    = campaign.jqrProfile?.requiredTactics ?? [];
+          const covered     = required.filter(t => tacticsCovered.includes(t)).length;
+          const jqrProgress = required.length > 0
+            ? Math.round((covered / required.length) * 100)
+            : 0;
+          saveCampaignToIndex({
+            ...campaign,
+            canvasNodes:    nodes,
+            canvasEdges:    edges,
+            nodeCount:      nodes.length,
+            tacticsCovered,
+            jqrProgress,
+            updatedAt:      new Date().toISOString(),
+          });
+        }
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [nodes, edges, globalSettings, getViewport]);
+  }, [nodes, edges, globalSettings, getViewport, campaign]);
 
   // Initial zoom
   useEffect(() => {

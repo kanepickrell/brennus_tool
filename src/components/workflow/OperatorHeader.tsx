@@ -1,3 +1,5 @@
+// src/components/workflow/OperatorHeader.tsx
+import { useNavigate } from 'react-router-dom';
 import { InfrastructureState } from './CollapsiblePropertiesPanel';
 import { OpforGlobalSettings } from '@/types/opfor';
 
@@ -10,7 +12,8 @@ export const OperatorHeader = ({
   infrastructureStatus,
   globalSettings,
 }: OperatorHeaderProps) => {
-  // Derive avatar initials: use operator first 2 chars, fallback to PX
+  const navigate = useNavigate();
+
   const avatarLabel =
     globalSettings.operator && globalSettings.operator.trim().length >= 2
       ? globalSettings.operator.trim().substring(0, 2).toUpperCase()
@@ -18,7 +21,6 @@ export const OperatorHeader = ({
 
   return (
     <>
-      {/* ── Scoped styles ── */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&family=Share+Tech+Mono&display=swap');
 
@@ -35,7 +37,6 @@ export const OperatorHeader = ({
           flex-shrink: 0;
         }
 
-        /* Subtle dot-grid background */
         .pnx-header::before {
           content: '';
           position: absolute;
@@ -47,7 +48,6 @@ export const OperatorHeader = ({
           pointer-events: none;
         }
 
-        /* Amber gradient line along bottom border */
         .pnx-header::after {
           content: '';
           position: absolute;
@@ -56,13 +56,57 @@ export const OperatorHeader = ({
           background: linear-gradient(to right, transparent, #f59e0b55, transparent);
         }
 
+        /* ── Dashboard back link ── */
+        .pnx-back {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-family: 'Share Tech Mono', monospace;
+          font-size: 9px;
+          color: #3f3f46;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          text-decoration: none;
+          transition: color 0.2s;
+          position: relative;
+          z-index: 1;
+          flex-shrink: 0;
+          cursor: pointer;
+          background: none;
+          border: none;
+          padding: 0;
+        }
+
+        .pnx-back:hover {
+          color: #71717a;
+        }
+
+        .pnx-back-arrow {
+          font-size: 11px;
+          line-height: 1;
+        }
+
+        /* ── Left cluster ── */
+        .pnx-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          position: relative;
+          z-index: 1;
+        }
+
+        .pnx-left-divider {
+          width: 1px;
+          height: 28px;
+          background: #27272a;
+          flex-shrink: 0;
+        }
+
         /* ── Wordmark ── */
         .pnx-wordmark {
           display: flex;
           flex-direction: column;
           line-height: 1;
-          position: relative;
-          z-index: 1;
         }
 
         .pnx-wordmark-primary {
@@ -73,14 +117,11 @@ export const OperatorHeader = ({
         .pnx-wordmark-text {
           font-family: "Rajdhani", sans-serif;
           font-weight: 500;
-          font-style: normal;
           font-size: 26px;
           letter-spacing: 0.28em;
           color: #ffffff;
           text-transform: uppercase;
           line-height: 1;
-          /* Tighten NN pair slightly within the wide tracking */
-          text-rendering: geometricPrecision;
         }
 
         .pnx-wordmark-cursor {
@@ -90,17 +131,8 @@ export const OperatorHeader = ({
           color: #f59e0b;
           margin-left: 2px;
           line-height: 1;
-        //   animation: pnx-blink 10.8s ease-in-out infinite;
         }
 
-        @keyframes pnx-blink {
-            0%, 100% { opacity: 1; }
-            45%       { opacity: 1; }
-            55%       { opacity: 0; }
-            90%       { opacity: 0; }
-            }
-
-        /* Campaign Studio + version row */
         .pnx-wordmark-sub {
           display: flex;
           align-items: center;
@@ -131,7 +163,7 @@ export const OperatorHeader = ({
           text-transform: uppercase;
         }
 
-        /* ── Left-side divider ── */
+        /* ── Network info ── */
         .pnx-divider {
           width: 1px;
           height: 36px;
@@ -142,7 +174,6 @@ export const OperatorHeader = ({
           z-index: 1;
         }
 
-        /* ── Network info ── */
         .pnx-network {
           display: flex;
           flex-direction: column;
@@ -175,7 +206,6 @@ export const OperatorHeader = ({
           z-index: 1;
         }
 
-        /* Status dots */
         .pnx-status-row {
           display: flex;
           align-items: center;
@@ -202,7 +232,6 @@ export const OperatorHeader = ({
         .pnx-dot-label-on  { color: #4ade80; }
         .pnx-dot-label-off { color: #52525b; }
 
-        /* Session */
         .pnx-session {
           display: flex;
           flex-direction: column;
@@ -217,7 +246,6 @@ export const OperatorHeader = ({
           letter-spacing: 0.2em;
         }
 
-        /* ── System state badge ── */
         .pnx-sys-badge {
           display: flex;
           align-items: center;
@@ -229,7 +257,6 @@ export const OperatorHeader = ({
           position: relative;
         }
 
-        /* Green left-edge accent bar — ties READY color to container */
         .pnx-sys-badge::before {
           content: '';
           position: absolute;
@@ -265,7 +292,6 @@ export const OperatorHeader = ({
           letter-spacing: 0.06em;
         }
 
-        /* Pulse ring around ready dot */
         .pnx-pulse {
           position: relative;
           width: 8px;
@@ -296,7 +322,6 @@ export const OperatorHeader = ({
           100% { transform: scale(2.4); opacity: 0; }
         }
 
-        /* ── PX Avatar (rotated diamond) ── */
         .pnx-avatar-wrap {
           width: 36px;
           height: 36px;
@@ -311,9 +336,7 @@ export const OperatorHeader = ({
           transition: border-color 0.2s;
         }
 
-        .pnx-avatar-wrap:hover {
-          border-color: #22c55e60;
-        }
+        .pnx-avatar-wrap:hover { border-color: #22c55e60; }
 
         .pnx-avatar-inner {
           transform: rotate(-45deg);
@@ -328,20 +351,22 @@ export const OperatorHeader = ({
           transition: color 0.2s;
         }
 
-        /* Highlight avatar when operator is set */
-        .pnx-avatar-named .pnx-avatar-wrap {
-          border-color: #f59e0b40;
-        }
-
-        .pnx-avatar-named .pnx-avatar-inner {
-          color: #a16207;
-        }
+        .pnx-avatar-named .pnx-avatar-wrap  { border-color: #f59e0b40; }
+        .pnx-avatar-named .pnx-avatar-inner { color: #a16207; }
       `}</style>
 
       <header className="pnx-header">
 
-        {/* ── LEFT: Wordmark + Network ── */}
-        <div style={{ display: 'flex', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+        {/* ── LEFT: Back + Wordmark + Network ── */}
+        <div className="pnx-left">
+
+          {/* Dashboard back link */}
+          <button className="pnx-back" onClick={() => navigate('/')}>
+            <span className="pnx-back-arrow">←</span>
+            <span>Dashboard</span>
+          </button>
+
+          <div className="pnx-left-divider" />
 
           {/* Wordmark */}
           <div className="pnx-wordmark">
@@ -356,20 +381,20 @@ export const OperatorHeader = ({
             </div>
           </div>
 
-          {/* Vertical divider */}
           <div className="pnx-divider" />
 
           {/* Network label */}
           <div className="pnx-network">
             <span className="pnx-field-label">Network</span>
-            <span className="pnx-field-value">Simspace Development Range</span>
+            <span className="pnx-field-value">
+              {globalSettings.targetNetwork || 'Simspace Development Range'}
+            </span>
           </div>
         </div>
 
         {/* ── RIGHT: Status + Session + System State ── */}
         <div className="pnx-right">
 
-          {/* C2 / Robot status dots */}
           <div className="pnx-status-row">
             <div className="pnx-dot-group">
               <div className={`pnx-dot ${infrastructureStatus.c2Connected ? 'pnx-dot-on' : 'pnx-dot-off'}`} />
@@ -385,13 +410,11 @@ export const OperatorHeader = ({
             </div>
           </div>
 
-          {/* Active session */}
           <div className="pnx-session">
             <span className="pnx-field-label">Active Session</span>
             <span className="pnx-session-value">{globalSettings.sessionId}</span>
           </div>
 
-          {/* System state badge */}
           <div className="pnx-sys-badge">
             <div className="pnx-sys-info">
               <span className="pnx-sys-label">System State</span>
@@ -401,7 +424,6 @@ export const OperatorHeader = ({
               </span>
             </div>
 
-            {/* PX avatar — updates to operator initials when operator is set */}
             <div className={globalSettings.operator?.trim() ? 'pnx-avatar-named' : ''}>
               <div className="pnx-avatar-wrap">
                 <span className="pnx-avatar-inner">{avatarLabel}</span>

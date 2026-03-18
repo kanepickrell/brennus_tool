@@ -114,7 +114,7 @@ export function NodePalette({ onDragStart, tacticFilter, onClearTacticFilter }: 
           .filter(n => !tacticFilter || n.tactic === tacticFilter),
       }))
       .filter(cat => cat.nodes.length > 0);
-  }, [modules, c2Filter]);
+  }, [modules, c2Filter, tacticFilter]);
 
   // Derive which C2 types are actually present in loaded modules
   const presentC2Types = useMemo(() => {
