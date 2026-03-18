@@ -252,6 +252,7 @@ function getGlobalSetting(key: string, globalSettings: OpforGlobalSettings): str
     'TARGET_USER': globalSettings.targetUser,
     'TARGET_PASS': globalSettings.targetPass,
     'TARGET_DOMAIN': globalSettings.targetDomain,
+    'WORKDIR': globalSettings.workdir,
   };
   return mapping[key] || '';
 }
@@ -419,6 +420,7 @@ function generateVariables(
   // C2 Configuration from global settings
   const c2Vars: Array<{ name: string; value: string }> = [];
   
+  if (globalSettings.workdir) c2Vars.push({ name: 'WORKDIR', value: globalSettings.workdir });
   if (globalSettings.c2Server) c2Vars.push({ name: 'CS_IP', value: globalSettings.c2Server });
   if (globalSettings.csUser) c2Vars.push({ name: 'CS_USER', value: globalSettings.csUser });
   if (globalSettings.csPass) c2Vars.push({ name: 'CS_PASS', value: globalSettings.csPass });

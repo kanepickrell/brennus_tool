@@ -860,6 +860,57 @@ export function PropertiesPanel({
                   />
                 </div>
                 <Separator />
+                <div className="space-y-2">
+                  <Label htmlFor="workdir" className="text-xs">Work Directory</Label>
+                  <Input
+                    id="workdir"
+                    placeholder="%{HOME}/sandworm/"
+                    value={globalSettings.workdir || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, workdir: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="csUser" className="text-xs">CS Username</Label>
+                  <Input
+                    id="csUser"
+                    placeholder="operator"
+                    value={globalSettings.csUser || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, csUser: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="csPass" className="text-xs">CS Password</Label>
+                  <Input
+                    id="csPass"
+                    type="password"
+                    placeholder="••••••••"
+                    value={globalSettings.csPass || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, csPass: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="csDir" className="text-xs">CS Directory</Label>
+                  <Input
+                    id="csDir"
+                    placeholder="/opt/cobaltstrike"
+                    value={globalSettings.csDir || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, csDir: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="csPort" className="text-xs">CS Port</Label>
+                  <Input
+                    id="csPort"
+                    placeholder="50050"
+                    value={globalSettings.csPort || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, csPort: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
+                  />
+                </div>
                 <Button 
                   variant="outline" 
                   size="sm" 

@@ -346,7 +346,7 @@ export const OperatorHeader = ({
           {/* Wordmark */}
           <div className="pnx-wordmark">
             <div className="pnx-wordmark-primary">
-              <span className="pnx-wordmark-text">PERENNOX</span>
+              <span className="pnx-wordmark-text">LUMEN</span>
               <span className="pnx-wordmark-cursor">_</span>
             </div>
             <div className="pnx-wordmark-sub">

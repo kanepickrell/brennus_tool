@@ -78,6 +78,11 @@ function WorkflowBuilderInner() {
     operator: '',
     redTeam: '',
     notes: '',
+    workdir: '%{HOME}/sandworm/',
+    csUser: 'operator',
+    csPass: '',
+    csDir: '/opt/cobaltstrike',
+    csPort: '50050',
   });
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);

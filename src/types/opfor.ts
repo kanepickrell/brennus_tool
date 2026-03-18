@@ -217,6 +217,10 @@ export interface OpforGlobalSettings {
   /** Target domain */
   targetDomain?: string;
   
+  // === Working Directory ===
+  /** Working directory for payloads and artifacts */
+  workdir?: string;
+
   // === Payload Configuration (new) ===
   /** Path to payload storage */
   payloadPath?: string;
