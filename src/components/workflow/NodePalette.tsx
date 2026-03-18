@@ -1,5 +1,5 @@
 // src/components/workflow/NodePalette.tsx
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, ChevronRight, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,9 +24,18 @@ const tacticConfig: Record<string, { label: string; icon: string; color: string 
   'control': { label: 'Control Flow',         icon: '⚙️', color: 'text-zinc-400'   },
 };
 
-export function NodePalette({ onDragStart }: { onDragStart: (e: React.DragEvent, node: OpforNodeDefinition) => void }) {
+export function NodePalette({ onDragStart, tacticFilter, onClearTacticFilter }: {
+  onDragStart: (e: React.DragEvent, node: OpforNodeDefinition) => void;
+  tacticFilter?: string | null;
+  onClearTacticFilter?: () => void;
+}) {
   const [search, setSearch]     = useState('');
   const [c2Filter, setC2Filter] = useState<string>('all');
+
+  // When tacticFilter comes in from JQR panel, clear search so results show
+  useEffect(() => {
+    if (tacticFilter) setSearch('');
+  }, [tacticFilter]);
 
   const { modules, loading, error, refresh } = useLibraryModules();
 
@@ -101,7 +110,8 @@ export function NodePalette({ onDragStart }: { onDragStart: (e: React.DragEvent,
         tactic,
         nodes: nodeDefinitions
           .filter(n => n.tactic === tactic)
-          .filter(n => c2Filter === 'all' || n.executionType === c2Filter),
+          .filter(n => c2Filter === 'all' || n.executionType === c2Filter)
+          .filter(n => !tacticFilter || n.tactic === tacticFilter),
       }))
       .filter(cat => cat.nodes.length > 0);
   }, [modules, c2Filter]);
@@ -224,6 +234,21 @@ export function NodePalette({ onDragStart }: { onDragStart: (e: React.DragEvent,
         <div className="mt-2 text-[10px] text-zinc-600">
           {modules.length} modules loaded
         </div>
+
+        {/* JQR tactic filter banner */}
+        {tacticFilter && (
+          <div className="mt-2 flex items-center justify-between px-2 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded">
+            <span className="text-[9px] font-mono text-amber-400 uppercase tracking-wider">
+              Filtered: {tacticFilter}
+            </span>
+            <button
+              onClick={onClearTacticFilter}
+              className="text-[9px] text-amber-600 hover:text-amber-400 font-mono transition-colors"
+            >
+              ✕ clear
+            </button>
+          </div>
+        )}
       </div>
 
       <ScrollArea className="flex-1">

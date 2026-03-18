@@ -28,6 +28,8 @@ import { SaveLoadDialog } from '../opfor/SaveLoadDialog';
 import { OpforNode } from './OpforNode';
 import { ExecutionPanel, useExecutionState } from './ExecutionPanel';
 import { OperatorHeader } from './OperatorHeader';
+import { JQRPanel } from './JQRPanel';
+import { ReadinessCheck } from './ReadinessCheck';
 import {
   OpforGlobalSettings,
   OpforNodeData,
@@ -36,6 +38,7 @@ import {
   WorkflowFile,
   CanvasVariable,
 } from '@/types/opfor';
+import { CampaignConfig } from '@/types/campaign';
 import { useToast } from '@/hooks/use-toast';
 import { WorkflowService } from '@/services/workflowService';
 import {
@@ -55,7 +58,7 @@ const nodeTypes = { opforNode: OpforNode };
 const initialNodes: Node[] = [];
 const initialEdges: Edge[] = [];
 
-function WorkflowBuilderInner() {
+function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }) {
   const { toast } = useToast();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const hasInitialNode = useRef(false);
@@ -84,6 +87,32 @@ function WorkflowBuilderInner() {
     csDir: '/opt/cobaltstrike',
     csPort: '50050',
   });
+
+  // ── Seed globalSettings from campaign config on mount ──────────────────────
+  useEffect(() => {
+    if (!campaign) return;
+    setGlobalSettings(prev => ({
+      ...prev,
+      executionPlanName: campaign.name             || prev.executionPlanName,
+      operator:          campaign.operatorName      || prev.operator,
+      targetNetwork:     campaign.rangeEnvironment  || prev.targetNetwork,
+      c2Server:          campaign.c2Config?.csIp    || prev.c2Server,
+      csUser:            campaign.c2Config?.csUser   || prev.csUser,
+      csPass:            campaign.c2Config?.csPass   || prev.csPass,
+      csDir:             campaign.c2Config?.csDir    || prev.csDir,
+      csPort:            campaign.c2Config?.csPort   || prev.csPort,
+      workdir:           campaign.c2Config?.workdir  || prev.workdir,
+    }));
+  }, [campaign]);
+
+  // ── JQR profile + reactive state ──────────────────────────────────────────
+  const jqrProfile = campaign?.jqrProfile ?? null;
+
+  // ── Tactic filter (driven by JQR panel "+" button) ────────────────────────
+  const [tacticFilter, setTacticFilter] = useState<string | null>(null);
+
+  // ── Readiness check modal ─────────────────────────────────────────────────
+  const [showReadiness, setShowReadiness] = useState(false);
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
@@ -606,7 +635,13 @@ function WorkflowBuilderInner() {
 
   const handleSimulate = useCallback(() => handleRunExecution(), [handleRunExecution]);
 
+  // ── Export — gates through readiness check ────────────────────────────────
   const handleExport = useCallback(() => {
+    setShowReadiness(true);
+  }, []);
+
+  const handleConfirmExport = useCallback(() => {
+    setShowReadiness(false);
     const operationCard = {
       name: globalSettings.executionPlanName,
       steps: nodes.map((node, idx) => ({
@@ -678,7 +713,7 @@ function WorkflowBuilderInner() {
   return (
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
 
-      {/* ── PERENNOX_ Header ── */}
+      {/* ── LUMEN Header ── */}
       <OperatorHeader
         infrastructureStatus={infrastructureStatus}
         globalSettings={globalSettings}
@@ -701,8 +736,14 @@ function WorkflowBuilderInner() {
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">
+
+        {/* ── Left: Tactic Library ── */}
         <div className="w-72 border-r border-panel-border flex-shrink-0">
-          <NodePalette onDragStart={onDragStart} />
+          <NodePalette
+            onDragStart={onDragStart}
+            tacticFilter={tacticFilter}
+            onClearTacticFilter={() => setTacticFilter(null)}
+          />
         </div>
 
         {isScriptView ? (
@@ -710,21 +751,30 @@ function WorkflowBuilderInner() {
             <div className="flex-1 min-w-0">
               <ScriptView nodes={nodes} edges={edges} globalSettings={globalSettings} />
             </div>
-            <CollapsiblePropertiesPanel
-              selectedNode={panelSelectedNode}
-              nodes={panelNodes}
-              timerLog={executionLog}
-              globalSettings={globalSettings}
-              onSettingsChange={setGlobalSettings}
-              onNodeDataChange={handleNodeDataChange}
-              onAddNodeToCanvas={handleAddNodeFromAI}
-              availableVariables={availableVariables}
-              edges={edges}
-              nodeInstances={nodeInstances}
-              connectionContext={connectionContext}
-              nodeMap={nodeMap}
-              infrastructureStatus={infrastructureStatus}
-            />
+
+            {/* Right panel with JQR panel above */}
+            <div className="flex flex-col flex-shrink-0" style={{ width: 'auto' }}>
+              <JQRPanel
+                nodes={nodes}
+                jqrProfile={jqrProfile}
+                onFilterTactic={(tacticId) => setTacticFilter(tacticId)}
+              />
+              <CollapsiblePropertiesPanel
+                selectedNode={panelSelectedNode}
+                nodes={panelNodes}
+                timerLog={executionLog}
+                globalSettings={globalSettings}
+                onSettingsChange={setGlobalSettings}
+                onNodeDataChange={handleNodeDataChange}
+                onAddNodeToCanvas={handleAddNodeFromAI}
+                availableVariables={availableVariables}
+                edges={edges}
+                nodeInstances={nodeInstances}
+                connectionContext={connectionContext}
+                nodeMap={nodeMap}
+                infrastructureStatus={infrastructureStatus}
+              />
+            </div>
           </div>
         ) : (
           <>
@@ -807,21 +857,29 @@ function WorkflowBuilderInner() {
               </ReactFlow>
             </div>
 
-            <CollapsiblePropertiesPanel
-              selectedNode={panelSelectedNode}
-              nodes={panelNodes}
-              timerLog={executionLog}
-              globalSettings={globalSettings}
-              onSettingsChange={setGlobalSettings}
-              onNodeDataChange={handleNodeDataChange}
-              onAddNodeToCanvas={handleAddNodeFromAI}
-              availableVariables={availableVariables}
-              edges={edges}
-              nodeInstances={nodeInstances}
-              connectionContext={connectionContext}
-              nodeMap={nodeMap}
-              infrastructureStatus={infrastructureStatus}
-            />
+            {/* Right panel with JQR panel above properties */}
+            <div className="flex flex-col flex-shrink-0" style={{ width: 'auto' }}>
+              <JQRPanel
+                nodes={nodes}
+                jqrProfile={jqrProfile}
+                onFilterTactic={(tacticId) => setTacticFilter(tacticId)}
+              />
+              <CollapsiblePropertiesPanel
+                selectedNode={panelSelectedNode}
+                nodes={panelNodes}
+                timerLog={executionLog}
+                globalSettings={globalSettings}
+                onSettingsChange={setGlobalSettings}
+                onNodeDataChange={handleNodeDataChange}
+                onAddNodeToCanvas={handleAddNodeFromAI}
+                availableVariables={availableVariables}
+                edges={edges}
+                nodeInstances={nodeInstances}
+                connectionContext={connectionContext}
+                nodeMap={nodeMap}
+                infrastructureStatus={infrastructureStatus}
+              />
+            </div>
           </>
         )}
       </div>
@@ -851,14 +909,25 @@ function WorkflowBuilderInner() {
         mode="load"
         onLoad={handleLoadWorkflow}
       />
+
+      {/* ── Readiness check modal — gates export ── */}
+      {showReadiness && (
+        <ReadinessCheck
+          nodes={nodes}
+          edges={edges}
+          jqrProfile={jqrProfile}
+          onConfirm={handleConfirmExport}
+          onClose={() => setShowReadiness(false)}
+        />
+      )}
     </div>
   );
 }
 
-export function WorkflowBuilder() {
+export function WorkflowBuilder({ campaign }: { campaign?: CampaignConfig | null }) {
   return (
     <ReactFlowProvider>
-      <WorkflowBuilderInner />
+      <WorkflowBuilderInner campaign={campaign} />
     </ReactFlowProvider>
   );
 }
