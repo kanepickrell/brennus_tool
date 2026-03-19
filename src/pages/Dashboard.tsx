@@ -45,7 +45,7 @@ const LUMEN_HEADER_STYLES = `
     background: linear-gradient(to right, transparent, #f59e0b55, transparent);
   }
   .lumen-wordmark { display: flex; flex-direction: column; line-height: 1; position: relative; z-index: 1; }
-  .lumen-wordmark-primary { display: flex; align-items: baseline; }
+  .lumen-wordmark-primary { display: flex; align-items: center; }
   .lumen-wordmark-text {
     font-family: "Rajdhani", sans-serif;
     font-weight: 500;
@@ -55,13 +55,11 @@ const LUMEN_HEADER_STYLES = `
     text-transform: uppercase;
     line-height: 1;
   }
-  .lumen-wordmark-cursor {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 26px;
-    color: #f59e0b;
-    margin-left: 2px;
-    line-height: 1;
+  .lumen-wordmark-rays {
+    display: block;
+    flex-shrink: 0;
+    overflow: visible;
+    margin-top: 4px;
   }
   .lumen-wordmark-sub { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
   .lumen-sub-label {
@@ -156,7 +154,6 @@ function CampaignCard({
   const c2Badge = C2_BADGE[campaign.c2Framework];
   const required = campaign.jqrProfile?.requiredTactics ?? [];
 
-  // Close menu on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -190,7 +187,6 @@ function CampaignCard({
     >
       {/* Canvas preview area */}
       <div className="relative h-36 bg-zinc-950 border-b border-zinc-800 overflow-hidden">
-        {/* Grid texture */}
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -198,7 +194,6 @@ function CampaignCard({
             backgroundSize: '20px 20px',
           }}
         />
-        {/* Tactic minimap centered */}
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
           <TacticMinimap covered={campaign.tacticsCovered ?? []} required={required} />
           <div className="flex items-center gap-1.5">
@@ -218,7 +213,6 @@ function CampaignCard({
             </span>
           </div>
         </div>
-        {/* Kebab menu */}
         <div
           ref={menuRef}
           className="absolute top-2 right-2"
@@ -353,7 +347,6 @@ export default function Dashboard() {
     setCampaigns(getCampaignIndex());
   };
 
-  // Stats
   const totalNodes    = campaigns.reduce((s, c) => s + (c.nodeCount ?? 0), 0);
   const completedJQRs = campaigns.filter(c => c.jqrProgress >= 100).length;
 
@@ -361,13 +354,58 @@ export default function Dashboard() {
     <div className="min-h-screen bg-zinc-950 flex flex-col">
       <style>{LUMEN_HEADER_STYLES}</style>
 
-      {/* ── Top nav — matches OperatorHeader branding ── */}
+      {/* ── Top nav ── */}
       <header className="lumen-header">
+
         {/* LEFT: Wordmark */}
         <div className="lumen-wordmark">
           <div className="lumen-wordmark-primary">
             <span className="lumen-wordmark-text">LUMEN</span>
-            <span className="lumen-wordmark-cursor">_</span>
+
+            {/*
+              Inline SVG rays — identical geometry to OperatorHeader.
+              viewBox 0 0 24 18, origin (0,13) = base of N.
+              Ray 1: steep accent  (10,2)  1px   opacity 0.62
+              Ray 2: mid accent    (14,7)  1.5px  opacity 0.82
+              Ray 3: shell cursor  (16,13) 2.5px  opacity 1.0  flat/horizontal
+            */}
+            <svg
+              className="lumen-wordmark-rays"
+              width="24"
+              height="18"
+              viewBox="0 0 24 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <circle cx="0" cy="13" r="1.2" fill="#f59e0b" opacity="0.7" />
+
+              <line
+                x1="0"  y1="13"
+                x2="10" y2="2"
+                stroke="#f59e0b"
+                strokeWidth="1"
+                strokeLinecap="round"
+                opacity="0.62"
+              />
+
+              <line
+                x1="0"  y1="13"
+                x2="14" y2="7"
+                stroke="#f59e0b"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.82"
+              />
+
+              <line
+                x1="0"  y1="13"
+                x2="16" y2="13"
+                stroke="#f59e0b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
           <div className="lumen-wordmark-sub">
             <span className="lumen-sub-label">Campaign Studio</span>
@@ -407,7 +445,6 @@ export default function Dashboard() {
           <NavItem icon={<Activity className="h-3.5 w-3.5" />} label="Recent" />
           <NavItem icon={<Shield className="h-3.5 w-3.5" />} label="JQR Tracked" />
 
-          {/* Stats */}
           <div className="mt-auto pt-4 border-t border-zinc-800 space-y-3 px-1">
             <Stat label="Total Campaigns" value={campaigns.length} />
             <Stat label="JQRs Complete"   value={completedJQRs} />
@@ -419,7 +456,6 @@ export default function Dashboard() {
         <main className="flex-1 overflow-y-auto">
           <div className="p-6">
 
-            {/* Search + filter bar */}
             {campaigns.length > 0 && (
               <div className="flex items-center gap-3 mb-6">
                 <div className="relative flex-1 max-w-xs">
@@ -440,7 +476,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Grid or empty state */}
             {campaigns.length === 0 ? (
               <EmptyState onNew={() => navigate('/new')} onImport={handleImport} />
             ) : filtered.length === 0 ? (

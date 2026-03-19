@@ -137,7 +137,6 @@ function StepJQR({
     if (!isCustom) setSelectedProfile({ ...JQR_PRESETS.find(p => p.id === 'custom')! });
   };
 
-  // Which tactics to show as checked
   const activeTactics = isCustom ? customTactics : selectedProfile.requiredTactics;
 
   return (
@@ -150,7 +149,6 @@ function StepJQR({
         </p>
       </div>
 
-      {/* Preset selector */}
       <div className="space-y-2">
         <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
           Load Profile
@@ -182,14 +180,11 @@ function StepJQR({
                 )}
                 {preset.id !== 'custom' && (
                   <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {preset.requiredTactics.map(t => {
-                      const tactic = MITRE_TACTICS.find(m => m.id === t);
-                      return (
-                        <span key={t} className="text-[8px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">
-                          {t}
-                        </span>
-                      );
-                    })}
+                    {preset.requiredTactics.map(t => (
+                      <span key={t} className="text-[8px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">
+                        {t}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
@@ -198,7 +193,6 @@ function StepJQR({
         </div>
       </div>
 
-      {/* Tactic grid — always editable */}
       <div className="space-y-2">
         <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
           Required Tactics {!isCustom && <span className="text-zinc-600 normal-case">(edit to customize)</span>}
@@ -271,7 +265,6 @@ function StepC2({
         </p>
       </div>
 
-      {/* Framework selector */}
       <div className="space-y-2">
         <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Framework</label>
         <div className="grid grid-cols-2 gap-2">
@@ -322,7 +315,6 @@ function StepC2({
         </div>
       </div>
 
-      {/* CS-specific fields */}
       {showCSFields && (
         <div className="space-y-4 p-4 rounded-xl bg-zinc-900/50 border border-zinc-800">
           <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
@@ -470,20 +462,16 @@ export default function NewCampaign() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
-  // Step 1
   const [name,     setName]     = useState('');
   const [operator, setOperator] = useState('');
   const [range,    setRange]    = useState('');
 
-  // Step 2
   const [selectedProfile, setSelectedProfile] = useState<JQRProfile>(JQR_PRESETS[0]);
   const [customTactics,   setCustomTactics]   = useState<string[]>([]);
 
-  // Step 3
   const [framework, setFramework] = useState<C2Framework>('cobalt_strike');
   const [c2Config,  setC2Config]  = useState({ ...DEFAULT_C2_CONFIG });
 
-  // Active tactics (preset or custom)
   const activeTactics = selectedProfile.id === 'custom'
     ? customTactics
     : selectedProfile.requiredTactics;
@@ -547,48 +535,96 @@ export default function NewCampaign() {
           height: 1px;
           background: linear-gradient(to right, transparent, #f59e0b55, transparent);
         }
-        .wiz-wordmark { display:flex; flex-direction:column; line-height:1; position:relative; z-index:1; }
-        .wiz-wordmark-primary { display:flex; align-items:baseline; }
+        .wiz-wordmark {
+          display: flex; flex-direction: column; line-height: 1;
+          position: absolute; left: 50%; transform: translateX(-50%);
+          z-index: 1;
+        }
+        .wiz-wordmark-primary { display: flex; align-items: center; }
         .wiz-wordmark-text {
-          font-family:"Rajdhani",sans-serif; font-weight:500; font-size:26px;
-          letter-spacing:0.28em; color:#ffffff; text-transform:uppercase; line-height:1;
+          font-family: "Rajdhani", sans-serif; font-weight: 500; font-size: 26px;
+          letter-spacing: 0.28em; color: #ffffff; text-transform: uppercase; line-height: 1;
         }
-        .wiz-wordmark-cursor {
-          font-family:'Rajdhani',sans-serif; font-weight:700; font-size:26px;
-          color:#f59e0b; margin-left:2px; line-height:1;
+        .wiz-wordmark-rays {
+          display: block; flex-shrink: 0; overflow: visible; margin-top: 4px;
         }
-        .wiz-wordmark-sub { display:flex; align-items:center; gap:6px; margin-top:5px; }
+        .wiz-wordmark-sub { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
         .wiz-sub-label {
-          font-family:'Share Tech Mono',monospace; font-size:9px; color:#f59e0b;
-          letter-spacing:0.22em; text-transform:uppercase;
+          font-family: 'Share Tech Mono', monospace; font-size: 9px; color: #f59e0b;
+          letter-spacing: 0.22em; text-transform: uppercase;
         }
-        .wiz-sub-tick { width:1px; height:8px; background:#3f3f46; flex-shrink:0; }
+        .wiz-sub-tick { width: 1px; height: 8px; background: #3f3f46; flex-shrink: 0; }
         .wiz-sub-version {
-          font-family:'Share Tech Mono',monospace; font-size:9px; color:#52525b;
-          letter-spacing:0.12em; text-transform:uppercase;
+          font-family: 'Share Tech Mono', monospace; font-size: 9px; color: #52525b;
+          letter-spacing: 0.12em; text-transform: uppercase;
         }
         .wiz-back-btn {
-          font-family:'Share Tech Mono',monospace; font-size:10px;
-          letter-spacing:0.1em; text-transform:uppercase;
-          display:flex; align-items:center; gap:6px;
-          color:#52525b; transition:color 0.2s;
-          position:relative; z-index:1;
+          font-family: 'Share Tech Mono', monospace; font-size: 10px;
+          letter-spacing: 0.1em; text-transform: uppercase;
+          display: flex; align-items: center; gap: 6px;
+          color: #52525b; transition: color 0.2s;
+          position: relative; z-index: 1;
         }
-        .wiz-back-btn:hover { color:#a1a1aa; }
+        .wiz-back-btn:hover { color: #a1a1aa; }
       `}</style>
 
-      {/* ── Top bar — matches OperatorHeader branding ── */}
+      {/* ── Top bar ── */}
       <header className="lumen-wiz-header">
+
         {/* Back */}
         <button onClick={() => navigate('/')} className="wiz-back-btn">
           <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
         </button>
 
         {/* Wordmark — centered */}
-        <div className="wiz-wordmark" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+        <div className="wiz-wordmark">
           <div className="wiz-wordmark-primary">
             <span className="wiz-wordmark-text">LUMEN</span>
-            <span className="wiz-wordmark-cursor">_</span>
+
+            {/*
+              Inline SVG rays — identical to OperatorHeader and Dashboard.
+              viewBox 0 0 24 18, origin (0,13).
+              Ray 1: (10,2)  1px    0.62 opacity
+              Ray 2: (14,7)  1.5px  0.82 opacity
+              Ray 3: (16,13) 2.5px  1.0  horizontal
+            */}
+            <svg
+              className="wiz-wordmark-rays"
+              width="24"
+              height="18"
+              viewBox="0 0 24 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <circle cx="0" cy="13" r="1.2" fill="#f59e0b" opacity="0.7" />
+
+              <line
+                x1="0"  y1="13"
+                x2="10" y2="2"
+                stroke="#f59e0b"
+                strokeWidth="1"
+                strokeLinecap="round"
+                opacity="0.62"
+              />
+
+              <line
+                x1="0"  y1="13"
+                x2="14" y2="7"
+                stroke="#f59e0b"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.82"
+              />
+
+              <line
+                x1="0"  y1="13"
+                x2="16" y2="13"
+                stroke="#f59e0b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
           <div className="wiz-wordmark-sub">
             <span className="wiz-sub-label">New Campaign</span>
@@ -604,12 +640,10 @@ export default function NewCampaign() {
       {/* Body */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-xl">
-          {/* Step indicator */}
           <div className="flex justify-center mb-12">
             <StepIndicator current={step} />
           </div>
 
-          {/* Step content */}
           <div className="min-h-[420px]">
             {step === 1 && (
               <StepIdentity
@@ -641,7 +675,6 @@ export default function NewCampaign() {
             )}
           </div>
 
-          {/* Navigation */}
           <div className="flex items-center justify-between mt-10 pt-6 border-t border-zinc-800">
             <button
               onClick={() => step > 1 ? setStep(s => s - 1) : navigate('/')}

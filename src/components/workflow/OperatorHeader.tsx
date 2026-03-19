@@ -111,7 +111,7 @@ export const OperatorHeader = ({
 
         .pnx-wordmark-primary {
           display: flex;
-          align-items: baseline;
+          align-items: center;
         }
 
         .pnx-wordmark-text {
@@ -124,13 +124,12 @@ export const OperatorHeader = ({
           line-height: 1;
         }
 
-        .pnx-wordmark-cursor {
-          font-family: 'Rajdhani', sans-serif;
-          font-weight: 700;
-          font-size: 26px;
-          color: #f59e0b;
-          margin-left: 2px;
-          line-height: 1;
+        /* ── Inline SVG ray mark ── */
+        .pnx-wordmark-rays {
+          display: block;
+          flex-shrink: 0;
+          overflow: visible;
+          margin-top: 2px;
         }
 
         .pnx-wordmark-sub {
@@ -371,8 +370,63 @@ export const OperatorHeader = ({
           {/* Wordmark */}
           <div className="pnx-wordmark">
             <div className="pnx-wordmark-primary">
+
+              {/* LUMEN text — unchanged */}
               <span className="pnx-wordmark-text">LUMEN</span>
-              <span className="pnx-wordmark-cursor">_</span>
+
+              {/*
+                Ray SVG — tightened proportions, no animation.
+
+                viewBox: 0 0 24 18
+                  Origin (0, 13) = bottom-right of the N stroke.
+                  All three rays are shorter than before.
+
+                Ray 1 — steep accent:   (10, 2)   thinnest, dimmest
+                Ray 2 — mid accent:     (14, 7)   medium
+                Ray 3 — shell cursor:   (20, 13)  thick, horizontal, static
+              */}
+              <svg
+                className="pnx-wordmark-rays"
+                width="24"
+                height="18"
+                viewBox="0 0 24 18"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                {/* Anchor dot */}
+                <circle cx="0" cy="13" r="1.2" fill="#f59e0b" opacity="0.7" />
+
+                {/* Ray 1 — steep, short, dimmest */}
+                <line
+                  x1="0"  y1="13"
+                  x2="10" y2="2"
+                  stroke="#f59e0b"
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                  opacity="0.62"
+                />
+
+                {/* Ray 2 — mid angle */}
+                <line
+                  x1="0"  y1="13"
+                  x2="14" y2="7"
+                  stroke="#f59e0b"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  opacity="0.82"
+                />
+
+                {/* Ray 3 — shell underscore, flat, static */}
+                <line
+                  x1="0"  y1="13"
+                  x2="20" y2="13"
+                  stroke="#f59e0b"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+
             </div>
             <div className="pnx-wordmark-sub">
               <span className="pnx-sub-label">Campaign Studio</span>
