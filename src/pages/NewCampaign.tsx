@@ -589,42 +589,60 @@ export default function NewCampaign() {
               Ray 3: (16,13) 2.5px  1.0  horizontal
             */}
             <svg
-              className="wiz-wordmark-rays"
-              width="24"
-              height="18"
-              viewBox="0 0 24 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <circle cx="0" cy="13" r="1.2" fill="#f59e0b" opacity="0.7" />
+  className="wiz-wordmark-rays"
+  width="24"
+  height="18"
+  viewBox="0 0 24 18"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <circle cx="0" cy="13" r="1.2" fill="#f59e0b" opacity="0.7" />
 
-              <line
-                x1="0"  y1="13"
-                x2="10" y2="2"
-                stroke="#f59e0b"
-                strokeWidth="1"
-                strokeLinecap="round"
-                opacity="0.62"
-              />
+  <line
+    x1="0" y1="13"
+    x2="6" y2="0"
+    stroke="#f59e0b"
+    strokeWidth="1"
+    strokeLinecap="round"
+    opacity="0.38"
+  />
 
-              <line
-                x1="0"  y1="13"
-                x2="14" y2="7"
-                stroke="#f59e0b"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                opacity="0.82"
-              />
+  <line
+    x1="0"  y1="13"
+    x2="9" y2="1"
+    stroke="#f59e0b"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    opacity="0.54"
+  />
 
-              <line
-                x1="0"  y1="13"
-                x2="16" y2="13"
-                stroke="#f59e0b"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
+  <line
+    x1="0"  y1="13"
+    x2="12" y2="4"
+    stroke="#f59e0b"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    opacity="0.72"
+  />
+
+  <line
+    x1="0"  y1="13"
+    x2="14" y2="9"
+    stroke="#f59e0b"
+    strokeWidth="2.1"
+    strokeLinecap="round"
+    opacity="0.90"
+  />
+
+  <line
+    x1="0"  y1="13"
+    x2="16" y2="13"
+    stroke="#f59e0b"
+    strokeWidth="2.8"
+    strokeLinecap="round"
+  />
+</svg>
           </div>
           <div className="wiz-wordmark-sub">
             <span className="wiz-sub-label">New Campaign</span>

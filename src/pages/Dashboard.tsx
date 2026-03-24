@@ -363,49 +363,74 @@ export default function Dashboard() {
             <span className="lumen-wordmark-text">LUMEN</span>
 
             {/*
-              Inline SVG rays — identical geometry to OperatorHeader.
+              Camino shell rays — D4 geometry, refined.
               viewBox 0 0 24 18, origin (0,13) = base of N.
-              Ray 1: steep accent  (10,2)  1px   opacity 0.62
-              Ray 2: mid accent    (14,7)  1.5px  opacity 0.82
-              Ray 3: shell cursor  (16,13) 2.5px  opacity 1.0  flat/horizontal
+              Fan rotated ~15° clockwise vs D4 so upper rays
+              echo the N diagonal (N stroke runs ~top-left to bottom-right).
+              Opacities lifted: floor raised from 0.22 to 0.38.
+
+              D4 original → rotated +15° clockwise:
+                Ray 1: was (7,1)   → (9,3)   0.7px  op 0.38
+                Ray 2: was (10,2)  → (12,4)  1.0px  op 0.54
+                Ray 3: was (13,6)  → (14,7)  1.6px  op 0.72
+                Ray 4: was (15,10) → (15,11) 2.1px  op 0.90
+                Ray 5: stays (16,13)         2.8px  op 1.0
             */}
             <svg
-              className="lumen-wordmark-rays"
-              width="24"
-              height="18"
-              viewBox="0 0 24 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <circle cx="0" cy="13" r="1.2" fill="#f59e0b" opacity="0.7" />
+  className="lumen-wordmark-rays"
+  width="24"
+  height="18"
+  viewBox="0 0 24 18"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <circle cx="0" cy="13" r="1.4" fill="#f59e0b" opacity="0.85" />
 
-              <line
-                x1="0"  y1="13"
-                x2="10" y2="2"
-                stroke="#f59e0b"
-                strokeWidth="1"
-                strokeLinecap="round"
-                opacity="0.62"
-              />
+  <line
+    x1="0" y1="13"
+    x2="6" y2="0"
+    stroke="#f59e0b"
+    strokeWidth="0.7"
+    strokeLinecap="round"
+    opacity="0.38"
+  />
 
-              <line
-                x1="0"  y1="13"
-                x2="14" y2="7"
-                stroke="#f59e0b"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                opacity="0.82"
-              />
+  <line
+    x1="0"  y1="13"
+    x2="9" y2="1"
+    stroke="#f59e0b"
+    strokeWidth="1.0"
+    strokeLinecap="round"
+    opacity="0.54"
+  />
 
-              <line
-                x1="0"  y1="13"
-                x2="16" y2="13"
-                stroke="#f59e0b"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
+  <line
+    x1="0"  y1="13"
+    x2="12" y2="4"
+    stroke="#f59e0b"
+    strokeWidth="1.6"
+    strokeLinecap="round"
+    opacity="0.72"
+  />
+
+  <line
+    x1="0"  y1="13"
+    x2="14" y2="9"
+    stroke="#f59e0b"
+    strokeWidth="2.1"
+    strokeLinecap="round"
+    opacity="0.90"
+  />
+
+  <line
+    x1="0"  y1="13"
+    x2="16" y2="13"
+    stroke="#f59e0b"
+    strokeWidth="2.8"
+    strokeLinecap="round"
+  />
+</svg>
           </div>
           <div className="lumen-wordmark-sub">
             <span className="lumen-sub-label">Campaign Studio</span>

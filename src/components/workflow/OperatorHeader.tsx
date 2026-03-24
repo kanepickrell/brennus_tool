@@ -386,46 +386,31 @@ export const OperatorHeader = ({
                 Ray 3 — shell cursor:   (20, 13)  thick, horizontal, static
               */}
               <svg
-                className="pnx-wordmark-rays"
-                width="24"
-                height="18"
-                viewBox="0 0 24 18"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                {/* Anchor dot */}
-                <circle cx="0" cy="13" r="1.2" fill="#f59e0b" opacity="0.7" />
+  className="pnx-wordmark-rays"
+  width="24"
+  height="18"
+  viewBox="0 0 24 18"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-hidden="true"
+>
+  <circle cx="0" cy="13" r="1.4" fill="#f59e0b" opacity="0.85" />
 
-                {/* Ray 1 — steep, short, dimmest */}
-                <line
-                  x1="0"  y1="13"
-                  x2="10" y2="2"
-                  stroke="#f59e0b"
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                  opacity="0.62"
-                />
+  <line x1="0" y1="13" x2="6" y2="0"
+    stroke="#f59e0b" strokeWidth="0.7" strokeLinecap="round" opacity="0.38" />
 
-                {/* Ray 2 — mid angle */}
-                <line
-                  x1="0"  y1="13"
-                  x2="14" y2="7"
-                  stroke="#f59e0b"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  opacity="0.82"
-                />
+  <line x1="0" y1="13" x2="9" y2="1"
+    stroke="#f59e0b" strokeWidth="1.0" strokeLinecap="round" opacity="0.54" />
 
-                {/* Ray 3 — shell underscore, flat, static */}
-                <line
-                  x1="0"  y1="13"
-                  x2="20" y2="13"
-                  stroke="#f59e0b"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-              </svg>
+  <line x1="0" y1="13" x2="12" y2="4"
+    stroke="#f59e0b" strokeWidth="1.6" strokeLinecap="round" opacity="0.72" />
+
+  <line x1="0" y1="13" x2="14" y2="9"
+    stroke="#f59e0b" strokeWidth="2.1" strokeLinecap="round" opacity="0.90" />
+
+  <line x1="0" y1="13" x2="16" y2="13"
+    stroke="#f59e0b" strokeWidth="2.8" strokeLinecap="round" />
+</svg>
 
             </div>
             <div className="pnx-wordmark-sub">
