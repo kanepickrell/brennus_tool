@@ -41,10 +41,10 @@ const SmileyIcon = ({ className }: { className?: string }) => (
 
 // ── JQR coverage hook ────────────────────────────────────────────────────────
 
-function useTacticCoverage(nodes: Node[]): Record<string, string[]> {
+function useTacticCoverage(nodes: Node[] | undefined): Record<string, string[]> {
   return useMemo(() => {
     const coverage: Record<string, string[]> = {};
-    for (const node of nodes) {
+    for (const node of (nodes ?? [])) {
       const data = node.data as OpforNodeData;
       const tactic = data?.definition?.tactic;
       const name   = data?.definition?.name;
@@ -60,7 +60,7 @@ function useTacticCoverage(nodes: Node[]): Record<string, string[]> {
 // ── Inline JQR Tracker ───────────────────────────────────────────────────────
 
 interface JQRTrackerProps {
-  nodes: Node[];
+  nodes?: Node[];
   jqrProfile: JQRProfile | null;
   onFilterTactic?: (tacticId: string) => void;
 }
@@ -72,10 +72,12 @@ function JQRTracker({ nodes, jqrProfile, onFilterTactic }: JQRTrackerProps) {
   // No profile state
   if (!jqrProfile || jqrProfile.requiredTactics.length === 0) {
     return (
-      <div className="flex items-center gap-1.5 px-2.5 h-7 border border-zinc-800 rounded-sm bg-zinc-900/50">
+      <div className="flex items-center gap-2 px-2.5 h-7 border border-zinc-800 rounded-sm bg-zinc-900/50">
         <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-600 whitespace-nowrap">
-          No JQR Profile
+          JQR
         </span>
+        <div className="w-px h-3 bg-zinc-700 flex-shrink-0" />
+        <span className="text-[9px] font-mono text-zinc-700 whitespace-nowrap">No profile loaded</span>
       </div>
     );
   }
@@ -263,7 +265,7 @@ export interface ToolbarProps {
   onSave: () => void;
   onLoad: () => void;
   // JQR tracker props (replaces zoom controls)
-  nodes: Node[];
+  nodes?: Node[];
   jqrProfile: JQRProfile | null;
   onFilterTactic?: (tacticId: string) => void;
 }

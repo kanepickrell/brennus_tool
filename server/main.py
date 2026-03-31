@@ -571,13 +571,24 @@ async def create_terminal_session(request: TerminalRequest):
     work_dir = base_tmp / session_id
     work_dir.mkdir(parents=True, exist_ok=True)
     server_dir = Path(__file__).parent
+
+    # Copy cobaltstrike mock library (flat)
     cs_lib_source = server_dir / "cobaltstrike.py"
     if cs_lib_source.exists():
         shutil.copy(cs_lib_source, work_dir / "cobaltstrike.py")
+
+    # Copy cobaltstrikec2 directory
+    cs_dir_source = server_dir / "cobaltstrikec2"
+    if cs_dir_source.exists():
+        shutil.copytree(cs_dir_source, work_dir / "cobaltstrikec2", dirs_exist_ok=True)
+
+    # Copy all .resource files
+    for resource_file in server_dir.glob("*.resource"):
+        shutil.copy(resource_file, work_dir / resource_file.name)
+
     script_path = work_dir / request.script_name
     script_content = request.script_content
-    script_content = script_content.replace("Library             cobaltstrikec2/cobaltstrike.py", "Library             cobaltstrike.py")
-    script_content = script_content.replace("Library    cobaltstrikec2/cobaltstrike.py", "Library    cobaltstrike.py")
+    script_content = script_content.replace("Library             cobaltstrikec2/cobaltstrike.py", "Library             cobaltstrikec2/cobaltstrike.py")
     script_path.write_text(script_content)
     _terminal_sessions[session_id] = {"id": session_id, "script_path": str(script_path), "work_dir": str(work_dir), "status": "created", "created_at": datetime.now().isoformat()}
     return {"session_id": session_id, "script_path": str(script_path), "work_dir": str(work_dir)}

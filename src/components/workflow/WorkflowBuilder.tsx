@@ -1278,11 +1278,11 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         onSimulate={handleSimulate}
         onExport={handleExport}
         onReset={handleReset}
-        onZoomIn={() => zoomIn()}
-        onZoomOut={() => zoomOut()}
-        onFitView={() => fitView()}
         onSave={() => setSaveDialogOpen(true)}
         onLoad={() => setLoadDialogOpen(true)}
+        nodes={nodes}
+        jqrProfile={jqrProfile}
+        onFilterTactic={(tacticId) => setTacticFilter(tacticId)}
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">

@@ -19,7 +19,6 @@ export interface RobotScript {
   full: string;
   warnings: string[];
   missingDeps: string[];
-  /** Metadata about the generation */
   meta: {
     totalNodes: number;
     connectedNodes: number;
@@ -35,17 +34,19 @@ interface KeywordArg {
   position: number;
   variableRef?: boolean;
   variableName?: string;
-  // NEW: Reference a session variable directly
   sessionVariable?: string;
-  // NEW: Reference an input connection
   fromInput?: string;
+  /** If true, emit as named arg: argName=${VALUE} */
+  named?: boolean;
+  /** The named arg label, e.g. "ip" → "ip=${CS_IP}" */
+  argName?: string;
 }
 
 interface VariableDefinition {
   name: string;
   fromParam?: string;
   fromGlobalSetting?: string;
-  fromInput?: string;  // NEW: Get value from connected input
+  fromInput?: string;
   scope: 'global' | 'local' | 'suite';
   default?: string;
 }
@@ -60,16 +61,16 @@ interface RobotFrameworkConfig {
   postKeywordLog?: string;
   captureOutput?: string;
   isTeardown?: boolean;
-  // NEW FIELDS
-  preKeywordStatements?: string[];    // Statements to execute before keyword
-  postKeywordStatements?: string[];   // Statements to execute after keyword
-  captureOutputAsList?: boolean;      // Use @{} instead of ${}
-  sessionVariable?: string;           // Session variable this node produces/uses
+  /** Node is a Suite Setup — emitted in Settings, skipped in test body */
+  isSuiteSetup?: boolean;
+  /** Node is a Suite Teardown — emitted in Settings, skipped in test body */
+  isSuiteTeardown?: boolean;
+  preKeywordStatements?: string[];
+  postKeywordStatements?: string[];
+  captureOutputAsList?: boolean;
+  sessionVariable?: string;
 }
 
-/**
- * Instance tracking for unique variable naming
- */
 interface NodeInstance {
   node: Node;
   instanceIndex: number;
@@ -77,29 +78,18 @@ interface NodeInstance {
   variablePrefix: string;
 }
 
-/**
- * Connection context - maps node inputs to their source nodes
- */
 interface ConnectionContext {
-  /** Map of nodeId -> { inputId -> sourceNodeId } */
   inputSources: Map<string, Map<string, string>>;
-  /** Map of nodeId -> { outputId -> targetNodeIds[] } */
   outputTargets: Map<string, Map<string, string[]>>;
 }
 
-/**
- * Session tracking - tracks which node produces the current session
- */
 interface SessionContext {
-  /** Current session variable name */
   currentSessionVariable: string | null;
-  /** Node ID that produced the current session */
   producerNodeId: string | null;
 }
 
-/**
- * Find all nodes that are part of a connected chain
- */
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 function getConnectedNodes(nodes: Node[], edges: Edge[]): Set<string> {
   const connectedIds = new Set<string>();
   edges.forEach(edge => {
@@ -109,23 +99,17 @@ function getConnectedNodes(nodes: Node[], edges: Edge[]): Set<string> {
   return connectedIds;
 }
 
-/**
- * Build connection context from edges
- * This tells us which node's output connects to which node's input
- */
 function buildConnectionContext(edges: Edge[]): ConnectionContext {
   const inputSources = new Map<string, Map<string, string>>();
   const outputTargets = new Map<string, Map<string, string[]>>();
 
   edges.forEach(edge => {
-    // Track input sources: target node's input <- source node
     if (!inputSources.has(edge.target)) {
       inputSources.set(edge.target, new Map());
     }
     const targetInputHandle = edge.targetHandle || 'default';
     inputSources.get(edge.target)!.set(targetInputHandle, edge.source);
 
-    // Track output targets: source node's output -> target nodes
     if (!outputTargets.has(edge.source)) {
       outputTargets.set(edge.source, new Map());
     }
@@ -139,9 +123,6 @@ function buildConnectionContext(edges: Edge[]): ConnectionContext {
   return { inputSources, outputTargets };
 }
 
-/**
- * Topologically sort nodes based on edge connections
- */
 function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
   const inDegree = new Map<string, number>();
@@ -180,9 +161,6 @@ function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
   return sorted.length === nodes.length ? sorted : nodes;
 }
 
-/**
- * Build instance tracking for all nodes
- */
 function buildNodeInstances(nodes: Node[]): Map<string, NodeInstance> {
   const instances = new Map<string, NodeInstance>();
   const moduleCount = new Map<string, number>();
@@ -208,17 +186,11 @@ function buildNodeInstances(nodes: Node[]): Map<string, NodeInstance> {
   return instances;
 }
 
-/**
- * Get the instance-specific variable name
- */
 function getInstanceVariableName(baseName: string, prefix: string): string {
   if (!prefix) return baseName;
   return `${baseName}${prefix}`;
 }
 
-/**
- * Get parameter value with fallback
- */
 function getParameterValue(
   paramId: string,
   nodeData: OpforNodeData
@@ -238,32 +210,26 @@ function getParameterValue(
   return undefined;
 }
 
-/**
- * Get global setting value
- */
 function getGlobalSetting(key: string, globalSettings: OpforGlobalSettings): string {
   const mapping: Record<string, string | undefined> = {
-    'CS_IP': globalSettings.c2Server,
-    'CS_USER': globalSettings.csUser,
-    'CS_PASS': globalSettings.csPass,
-    'CS_DIR': globalSettings.csDir,
-    'CS_PORT': globalSettings.csPort,
-    'TARGET_IP': globalSettings.targetIp,
-    'TARGET_USER': globalSettings.targetUser,
-    'TARGET_PASS': globalSettings.targetPass,
-    'TARGET_DOMAIN': globalSettings.targetDomain,
-    'WORKDIR': globalSettings.workdir,
+    'CS_IP':        globalSettings.c2Server,
+    'CS_USER':      globalSettings.csUser,
+    'CS_PASS':      globalSettings.csPass,
+    'CS_DIR':       globalSettings.csDir,
+    'CS_PORT':      globalSettings.csPort,
+    'TARGET_IP':    globalSettings.targetIp,
+    'TARGET_USER':  globalSettings.targetUser,
+    'TARGET_PASS':  globalSettings.targetPass,
+    'TARGET_DOMAIN':globalSettings.targetDomain,
+    'WORKDIR':      globalSettings.workdir,
+    // New entries that Setup C2 needs
+    'ARTIFACT_DIR': globalSettings.artifactDir ?? 'artifact',
+    'DEBUG_MODE':   globalSettings.debugMode   ?? '${False}',
+    'SUDO_NEEDED':  globalSettings.sudoNeeded  ?? '${False}',
   };
-  return mapping[key] || '';
+  return mapping[key] ?? '';
 }
 
-/**
- * Resolve a variable reference based on canvas connections
- * 
- * If a parameter value is like ${LISTENER_NAME}, we check if this node
- * has an input connected to a node that produces LISTENER_NAME variables.
- * If so, we use that source node's instance-specific variable.
- */
 function resolveVariableReference(
   varRef: string,
   currentNodeId: string,
@@ -271,23 +237,16 @@ function resolveVariableReference(
   nodeInstances: Map<string, NodeInstance>,
   nodeMap: Map<string, Node>
 ): string {
-  // Check if it's a variable reference
   if (!varRef.startsWith('${') || !varRef.endsWith('}')) {
     return varRef;
   }
 
-  const baseVarName = varRef.slice(2, -1); // e.g., "LISTENER_NAME"
-  
-  // Get the category prefix (e.g., "LISTENER" from "LISTENER_NAME")
+  const baseVarName = varRef.slice(2, -1);
   const varCategory = baseVarName.split('_')[0];
 
-  // Look at what's connected to this node's inputs
   const inputSources = connectionContext.inputSources.get(currentNodeId);
-  if (!inputSources) {
-    return varRef; // No inputs connected, return as-is
-  }
+  if (!inputSources) return varRef;
 
-  // Find a source node that produces variables in this category
   for (const [_inputId, sourceNodeId] of inputSources) {
     const sourceNode = nodeMap.get(sourceNodeId);
     if (!sourceNode) continue;
@@ -296,14 +255,12 @@ function resolveVariableReference(
     const sourceRobotConfig = sourceData.definition.robotFramework as RobotFrameworkConfig | undefined;
     if (!sourceRobotConfig?.variables) continue;
 
-    // Check if source node produces variables in this category
     const matchingVar = sourceRobotConfig.variables.find(v => {
       const vCategory = v.name.split('_')[0];
       return vCategory === varCategory;
     });
 
     if (matchingVar) {
-      // Found the source! Use its instance-specific variable
       const sourceInstance = nodeInstances.get(sourceNodeId);
       if (sourceInstance) {
         const instanceVarName = getInstanceVariableName(baseVarName, sourceInstance.variablePrefix);
@@ -312,14 +269,9 @@ function resolveVariableReference(
     }
   }
 
-  // No matching connection found, return original
   return varRef;
 }
 
-/**
- * Substitute variables in a statement string
- * Handles both node-specific variables and session variables
- */
 function substituteStatementVariables(
   statement: string,
   instance: NodeInstance,
@@ -328,23 +280,28 @@ function substituteStatementVariables(
 ): string {
   let result = statement;
 
-  // Substitute node-specific variables
+
   robotConfig.variables?.forEach(varDef => {
     const baseVar = `\${${varDef.name}}`;
     const instanceVar = `\${${getInstanceVariableName(varDef.name, instance.variablePrefix)}}`;
     result = result.split(baseVar).join(instanceVar);
   });
 
-  // Substitute captured output variable
+  robotConfig.variables?.forEach(varDef => {
+    if (varDef.fromParam) {
+      const paramVar = `\${${varDef.fromParam}}`;
+      const instanceVar = `\${${getInstanceVariableName(varDef.name, instance.variablePrefix)}}`;
+      result = result.split(paramVar).join(instanceVar);
+    }
+  });
+
   if (robotConfig.captureOutput) {
     const baseOutputVar = `\${${robotConfig.captureOutput}}`;
     const instanceOutputVar = `\${${getInstanceVariableName(robotConfig.captureOutput, instance.variablePrefix)}}`;
     result = result.split(baseOutputVar).join(instanceOutputVar);
   }
 
-  // Substitute session variable if present
   if (sessionContext.currentSessionVariable) {
-    // Handle common session variable patterns
     const sessionPatterns = ['CURRENT_SESSION', 'SESSION', 'session'];
     sessionPatterns.forEach(pattern => {
       const baseSessionVar = `\${${pattern}}`;
@@ -357,8 +314,52 @@ function substituteStatementVariables(
 }
 
 /**
- * Generate the *** Settings *** section
+ * Build the Suite Setup or Suite Teardown line + continuation args.
+ * Named args are emitted as:  ...    argName=${VALUE}
  */
+function buildSuiteLifecycleLine(
+  prefix: 'Suite Setup' | 'Suite Teardown',
+  keyword: string,
+  keywordArgs: KeywordArg[],
+  globalSettings: OpforGlobalSettings
+): string[] {
+  const lines: string[] = [];
+
+  if (keywordArgs.length === 0) {
+    lines.push(`${prefix.padEnd(20)}${keyword}`);
+    return lines;
+  }
+
+  // First continuation arg goes on the same logical line
+  lines.push(`${prefix.padEnd(20)}${keyword}`);
+
+  keywordArgs
+    .sort((a, b) => a.position - b.position)
+    .forEach(arg => {
+      let value = '';
+
+      if (arg.globalSetting) {
+        value = `\${${arg.globalSetting}}`;
+      } else if (arg.staticValue) {
+        value = arg.staticValue;
+      } else if (arg.variableName) {
+        value = `\${${arg.variableName}}`;
+      }
+
+      if (!value) return;
+
+      if (arg.named && arg.argName) {
+        lines.push(`...                     ${arg.argName}=${value}`);
+      } else {
+        lines.push(`...                     ${value}`);
+      }
+    });
+
+  return lines;
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
 function generateSettings(
   allNodes: Node[],
   globalSettings: OpforGlobalSettings
@@ -367,49 +368,77 @@ function generateSettings(
   const libraries = new Set<string>();
   const resources = new Set<string>();
 
+  let suiteSetupNode: Node | null = null;
+  let suiteTeardownNode: Node | null = null;
+
   allNodes.forEach(node => {
     const data = node.data as OpforNodeData;
     const robotConfig = data.definition.robotFramework as RobotFrameworkConfig | undefined;
 
-    if (robotConfig?.libraries) {
-      robotConfig.libraries.forEach(lib => libraries.add(lib));
-    }
-    
-    // NEW: Collect resources
-    if (robotConfig?.resources) {
-      robotConfig.resources.forEach(res => resources.add(res));
-    }
-    
     if (!robotConfig) {
       warnings.push(`Node "${data.definition.name}" missing robotFramework config`);
+      return;
     }
+
+    if (robotConfig.libraries) robotConfig.libraries.forEach(lib => libraries.add(lib));
+    if (robotConfig.resources) robotConfig.resources.forEach(res => resources.add(res));
+
+    if (robotConfig.isSuiteSetup)    suiteSetupNode    = node;
+    if (robotConfig.isSuiteTeardown) suiteTeardownNode = node;
   });
 
   const lines: string[] = [
     '*** Settings ***',
     `Documentation       ${globalSettings.executionPlanName || 'Generated Workflow'}`,
-    ''
+    '',
   ];
 
-  // Add libraries
+  // Libraries
   Array.from(libraries).sort().forEach(lib => {
     lines.push(`Library             ${lib}`);
   });
 
-  // NEW: Add resources
+  // Resources
   if (resources.size > 0) {
-    lines.push('');
+    if (libraries.size > 0) lines.push('');
     Array.from(resources).sort().forEach(res => {
       lines.push(`Resource            ${res}`);
     });
   }
 
+  // Suite Setup
+  if (suiteSetupNode) {
+    const data = (suiteSetupNode as Node).data as OpforNodeData;
+    const rc = data.definition.robotFramework as RobotFrameworkConfig;
+    lines.push('');
+    const setupLines = buildSuiteLifecycleLine(
+      'Suite Setup',
+      rc.keyword,
+      rc.keywordArgs ?? [],
+      globalSettings
+    );
+    lines.push(...setupLines);
+  }
+
+  // Suite Teardown
+  if (suiteTeardownNode) {
+    const data = (suiteTeardownNode as Node).data as OpforNodeData;
+    const rc = data.definition.robotFramework as RobotFrameworkConfig;
+    lines.push('');
+    const teardownLines = buildSuiteLifecycleLine(
+      'Suite Teardown',
+      rc.keyword,
+      rc.keywordArgs ?? [],
+      globalSettings
+    );
+    lines.push(...teardownLines);
+  }
+
   return { content: lines.join('\n'), warnings };
 }
 
-/**
- * Generate the *** Variables *** section
- */
+// ── Variables ─────────────────────────────────────────────────────────────────
+
 function generateVariables(
   allNodes: Node[],
   nodeInstances: Map<string, NodeInstance>,
@@ -417,25 +446,31 @@ function generateVariables(
 ): string {
   const lines: string[] = ['*** Variables ***'];
 
-  // C2 Configuration from global settings
+  // C2 / infrastructure variables from globalSettings
   const c2Vars: Array<{ name: string; value: string }> = [];
-  
-  if (globalSettings.workdir) c2Vars.push({ name: 'WORKDIR', value: globalSettings.workdir });
-  if (globalSettings.c2Server) c2Vars.push({ name: 'CS_IP', value: globalSettings.c2Server });
-  if (globalSettings.csUser) c2Vars.push({ name: 'CS_USER', value: globalSettings.csUser });
-  if (globalSettings.csPass) c2Vars.push({ name: 'CS_PASS', value: globalSettings.csPass });
-  if (globalSettings.csDir) c2Vars.push({ name: 'CS_DIR', value: globalSettings.csDir });
-  if (globalSettings.csPort) c2Vars.push({ name: 'CS_PORT', value: globalSettings.csPort });
+
+  if (globalSettings.workdir)    c2Vars.push({ name: 'WORKDIR',      value: globalSettings.workdir });
+  if (globalSettings.c2Server)   c2Vars.push({ name: 'CS_IP',        value: globalSettings.c2Server });
+  if (globalSettings.csUser)     c2Vars.push({ name: 'CS_USER',      value: globalSettings.csUser });
+  // if (globalSettings.csPass)     c2Vars.push({ name: 'CS_PASS', value: globalSettings.csPass || '' });
+  c2Vars.push({ name: 'CS_PASS', value: globalSettings.csPass || '' });
+  if (globalSettings.csDir)      c2Vars.push({ name: 'CS_DIR',       value: globalSettings.csDir });
+  if (globalSettings.csPort)     c2Vars.push({ name: 'CS_PORT',      value: globalSettings.csPort });
+
+  // Always emit these so Setup C2 never hits an undefined variable
+  c2Vars.push({ name: 'ARTIFACT_DIR', value: globalSettings.artifactDir ?? 'artifact' });
+  c2Vars.push({ name: 'DEBUG_MODE',   value: globalSettings.debugMode   ?? '${False}' });
+  c2Vars.push({ name: 'SUDO_NEEDED',  value: globalSettings.sudoNeeded  ?? '${False}' });
 
   if (c2Vars.length > 0) {
     lines.push('# C2 Server Configuration');
     c2Vars.forEach(v => {
-      const paddedName = `\${${v.name}}`.padEnd(24);
+      const paddedName = `\${${v.name}}`.padEnd(28);
       lines.push(`${paddedName}${v.value}`);
     });
   }
 
-  // Group variables by node instance
+  // Per-node variable blocks (listener names, payload names, etc.)
   const nodeVariableBlocks: Array<{ label: string; vars: Array<{ name: string; value: string | number }> }> = [];
 
   allNodes.forEach(node => {
@@ -450,7 +485,7 @@ function generateVariables(
     robotConfig.variables.forEach(varDef => {
       if (varDef.scope === 'suite' || varDef.scope === 'global') {
         let value: string | number | undefined;
-        
+
         if (varDef.fromParam) {
           value = getParameterValue(varDef.fromParam, data);
         } else if (varDef.fromGlobalSetting) {
@@ -467,14 +502,11 @@ function generateVariables(
     });
 
     if (blockVars.length > 0) {
-      const instanceLabel = instance.instanceIndex > 1 
+      const instanceLabel = instance.instanceIndex > 1
         ? `${data.definition.name} (Instance ${instance.instanceIndex})`
         : data.definition.name;
-      
-      nodeVariableBlocks.push({
-        label: instanceLabel,
-        vars: blockVars,
-      });
+
+      nodeVariableBlocks.push({ label: instanceLabel, vars: blockVars });
     }
   });
 
@@ -482,7 +514,7 @@ function generateVariables(
     lines.push('');
     lines.push(`# ${block.label}`);
     block.vars.forEach(v => {
-      const paddedName = `\${${v.name}}`.padEnd(24);
+      const paddedName = `\${${v.name}}`.padEnd(28);
       lines.push(`${paddedName}${v.value}`);
     });
   });
@@ -490,11 +522,8 @@ function generateVariables(
   return lines.join('\n');
 }
 
-/**
- * Generate the *** Test Cases *** section
- * Auto-resolves variable references based on canvas connections
- * NEW: Handles preKeywordStatements, postKeywordStatements, captureOutputAsList, sessionVariable
- */
+// ── Test Cases ────────────────────────────────────────────────────────────────
+
 function generateTestCases(
   connectedNodes: Node[],
   nodeInstances: Map<string, NodeInstance>,
@@ -518,8 +547,7 @@ function generateTestCases(
   lines.push('');
 
   let teardownKeyword: string | null = null;
-  
-  // NEW: Track session context across nodes
+
   const sessionContext: SessionContext = {
     currentSessionVariable: null,
     producerNodeId: null,
@@ -532,71 +560,59 @@ function generateTestCases(
 
     if (!robotConfig || !instance) return;
 
+    // Suite setup/teardown nodes don't go in the test body
+    if (robotConfig.isSuiteSetup || robotConfig.isSuiteTeardown) return;
+
     if (robotConfig.isTeardown) {
       teardownKeyword = robotConfig.keyword;
       return;
     }
 
-    // Pre-keyword log with instance-specific variable substitution
+    // Pre-keyword log
     if (robotConfig.preKeywordLog) {
-      let logMsg = substituteStatementVariables(
-        robotConfig.preKeywordLog,
-        instance,
-        robotConfig,
-        sessionContext
+      const logMsg = substituteStatementVariables(
+        robotConfig.preKeywordLog, instance, robotConfig, sessionContext
       );
       lines.push(`    Log To Console    \\n${logMsg}`);
     }
 
-    // NEW: Pre-keyword statements (e.g., Sleep)
-    if (robotConfig.preKeywordStatements && robotConfig.preKeywordStatements.length > 0) {
+    // Pre-keyword statements
+    if (robotConfig.preKeywordStatements?.length) {
       robotConfig.preKeywordStatements.forEach(stmt => {
-        const resolvedStmt = substituteStatementVariables(
-          stmt,
-          instance,
-          robotConfig,
-          sessionContext
-        );
+        const resolvedStmt = substituteStatementVariables(stmt, instance, robotConfig, sessionContext);
         lines.push(`    ${resolvedStmt}`);
       });
     }
 
-    // Build keyword call
+    // Keyword call line
     const hasOutput = robotConfig.captureOutput;
-    const outputVar = hasOutput 
-      ? getInstanceVariableName(robotConfig.captureOutput, instance.variablePrefix)
+    const outputVar = hasOutput
+      ? getInstanceVariableName(robotConfig.captureOutput!, instance.variablePrefix)
       : null;
-    
-    // NEW: Handle captureOutputAsList - use @{} for lists
     const varPrefix = robotConfig.captureOutputAsList ? '@' : '$';
-    
+
     const keywordLine = outputVar
       ? `    ${varPrefix}{${outputVar}}=    ${robotConfig.keyword}`
       : `    ${robotConfig.keyword}`;
 
     lines.push(keywordLine);
 
-    // Add arguments with connection-aware variable resolution
-    if (robotConfig.keywordArgs && robotConfig.keywordArgs.length > 0) {
+    // Keyword arguments
+    if (robotConfig.keywordArgs?.length) {
       robotConfig.keywordArgs
         .sort((a, b) => a.position - b.position)
         .forEach(arg => {
-          let argValue: string = '';
+          let argValue = '';
 
           if (arg.staticValue) {
             argValue = arg.staticValue;
           } else if (arg.globalSetting) {
             argValue = `\${${arg.globalSetting}}`;
           } else if (arg.sessionVariable) {
-            // NEW: Reference session variable directly
-            if (sessionContext.currentSessionVariable) {
-              argValue = `\${${sessionContext.currentSessionVariable}}`;
-            } else {
-              argValue = `\${${arg.sessionVariable}}`;
-            }
+            argValue = sessionContext.currentSessionVariable
+              ? `\${${sessionContext.currentSessionVariable}}`
+              : `\${${arg.sessionVariable}}`;
           } else if (arg.fromInput) {
-            // NEW: Get value from connected input
-            // Look up what's connected to this input
             const inputSources = connectionContext.inputSources.get(node.id);
             if (inputSources) {
               const sourceNodeId = inputSources.get(arg.fromInput);
@@ -606,49 +622,39 @@ function generateTestCases(
                 if (sourceInstance && sourceNode) {
                   const sourceData = sourceNode.data as OpforNodeData;
                   const sourceRobotConfig = sourceData.definition.robotFramework as RobotFrameworkConfig | undefined;
-                  
-                  // If the source has a captureOutput, use that variable
                   if (sourceRobotConfig?.captureOutput) {
                     const sourceOutputVar = getInstanceVariableName(
                       sourceRobotConfig.captureOutput,
                       sourceInstance.variablePrefix
                     );
                     argValue = `\${${sourceOutputVar}}`;
-                  }
-                  // If the source produces a session, use that
-                  else if (sourceRobotConfig?.sessionVariable) {
+                  } else if (sourceRobotConfig?.sessionVariable) {
                     argValue = `\${${sourceRobotConfig.sessionVariable}}`;
                   }
                 }
               }
             }
-            // Fallback if no connection found
             if (!argValue && arg.variableName) {
               argValue = `\${${arg.variableName}}`;
             }
           } else if (arg.param) {
             if (arg.variableRef && arg.variableName) {
-              // Use this node's instance-specific variable
               const instanceVarName = getInstanceVariableName(arg.variableName, instance.variablePrefix);
               argValue = `\${${instanceVarName}}`;
             } else {
-              // Get raw parameter value
               const value = getParameterValue(arg.param, data);
               let strValue = String(value ?? '');
-              
-              // AUTO-RESOLVE: If it's a variable reference, resolve based on connections
               if (strValue.startsWith('${') && strValue.endsWith('}')) {
                 strValue = resolveVariableReference(
-                  strValue,
-                  node.id,
-                  connectionContext,
-                  nodeInstances,
-                  nodeMap
+                  strValue, node.id, connectionContext, nodeInstances, nodeMap
                 );
               }
-              
               argValue = strValue;
             }
+          } else if (arg.variableName) {
+            // Bare variableName with no param — reference a variable by name directly
+            const instanceVarName = getInstanceVariableName(arg.variableName, instance.variablePrefix);
+            argValue = `\${${instanceVarName}}`;
           }
 
           if (argValue) {
@@ -657,32 +663,24 @@ function generateTestCases(
         });
     }
 
-    // NEW: Post-keyword statements (e.g., extracting from list)
-    if (robotConfig.postKeywordStatements && robotConfig.postKeywordStatements.length > 0) {
+    // Post-keyword statements
+    if (robotConfig.postKeywordStatements?.length) {
       robotConfig.postKeywordStatements.forEach(stmt => {
-        const resolvedStmt = substituteStatementVariables(
-          stmt,
-          instance,
-          robotConfig,
-          sessionContext
-        );
+        const resolvedStmt = substituteStatementVariables(stmt, instance, robotConfig, sessionContext);
         lines.push(`    ${resolvedStmt}`);
       });
     }
 
-    // NEW: Update session context if this node produces a session
+    // Update session context
     if (robotConfig.sessionVariable) {
       sessionContext.currentSessionVariable = robotConfig.sessionVariable;
       sessionContext.producerNodeId = node.id;
     }
 
-    // Post-keyword log with instance-specific variable substitution
+    // Post-keyword log
     if (robotConfig.postKeywordLog) {
-      let logMsg = substituteStatementVariables(
-        robotConfig.postKeywordLog,
-        instance,
-        robotConfig,
-        sessionContext
+      const logMsg = substituteStatementVariables(
+        robotConfig.postKeywordLog, instance, robotConfig, sessionContext
       );
       lines.push(`    Log To Console    \\n${logMsg}`);
     }
@@ -697,16 +695,12 @@ function generateTestCases(
   return lines.join('\n');
 }
 
-/**
- * Generate the *** Keywords *** section
- */
 function generateKeywords(_nodes: Node[]): string {
   return '*** Keywords ***\n';
 }
 
-/**
- * Main generator function
- */
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export function generateRobotScript(
   nodes: Node[],
   edges: Edge[],
@@ -729,21 +723,15 @@ export function generateRobotScript(
       full: '# Empty workflow - add nodes to generate script',
       warnings: ['No valid nodes found in workflow'],
       missingDeps: [],
-      meta: {
-        totalNodes: 0,
-        connectedNodes: 0,
-        stagedNodes: 0,
-        hasExecutionChain: false,
-      },
+      meta: { totalNodes: 0, connectedNodes: 0, stagedNodes: 0, hasExecutionChain: false },
     };
   }
 
-  // Build supporting data structures
   const nodeMap = new Map(validNodes.map(n => [n.id, n]));
   const nodeInstances = buildNodeInstances(validNodes);
   const connectionContext = buildConnectionContext(edges);
 
-  // Log instance info for debugging
+  // Warn on duplicate module instances
   const instanceCounts = new Map<string, number>();
   nodeInstances.forEach(inst => {
     instanceCounts.set(inst.moduleId, Math.max(instanceCounts.get(inst.moduleId) || 0, inst.instanceIndex));
@@ -754,29 +742,25 @@ export function generateRobotScript(
     }
   });
 
-  // Determine connected nodes
   const connectedNodeIds = getConnectedNodes(validNodes, edges);
   const connectedNodes = validNodes.filter(n => connectedNodeIds.has(n.id));
-  
-  const sortedConnectedNodes = connectedNodes.length > 0 
+  const sortedConnectedNodes = connectedNodes.length > 0
     ? topologicalSort(connectedNodes, edges)
     : [];
 
-  // Generate sections
   const { content: settings, warnings: settingsWarnings } = generateSettings(validNodes, globalSettings);
   warnings.push(...settingsWarnings);
 
   const variables = generateVariables(validNodes, nodeInstances, globalSettings);
   const testCases = generateTestCases(
-    sortedConnectedNodes, 
-    nodeInstances, 
+    sortedConnectedNodes,
+    nodeInstances,
     connectionContext,
     nodeMap,
     globalSettings
   );
   const keywords = generateKeywords(validNodes);
 
-  // Check for missing configs
   validNodes.forEach(node => {
     const data = node.data as OpforNodeData;
     if (!data.definition.robotFramework) {
@@ -789,15 +773,7 @@ export function generateRobotScript(
     warnings.push(`${stagedCount} node(s) staged but not connected to execution chain`);
   }
 
-  const full = [
-    settings,
-    '',
-    '',
-    variables,
-    '',
-    '',
-    testCases,
-  ].join('\n');
+  const full = [settings, '', '', variables, '', '', testCases].join('\n');
 
   return {
     settings,
@@ -816,9 +792,6 @@ export function generateRobotScript(
   };
 }
 
-/**
- * Download the generated script as a .robot file
- */
 export function downloadRobotScript(script: RobotScript, filename?: string): void {
   const blob = new Blob([script.full], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
