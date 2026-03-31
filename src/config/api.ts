@@ -7,14 +7,18 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
   ENDPOINTS: {
-    OPERATOR_MODULES: '/api/plugins/operator/modules',
-    OPERATOR_MODULE_DETAIL: (key: string) => `/api/plugins/operator/modules/${key}`,
+    // OPERATOR_MODULES: '/api/plugins/operator/modules',
+    OPERATOR_MODULES: '/api/library-modules',
+    // OPERATOR_MODULE_DETAIL: (key: string) => `/api/plugins/operator/modules/${key}`,
+    OPERATOR_MODULE_DETAIL: (key: string) => `/api/library-modules/${key}`,
     OPERATOR_CATEGORIES: '/api/plugins/operator/categories',
     OPERATOR_TACTICS: '/api/plugins/operator/tactics',
     OPERATOR_STATS: '/api/plugins/operator/stats',
     OPERATOR_VALIDATE: '/api/plugins/operator/validate',
   }
 };
+
+
 
 // Type declaration for Vite env variables
 declare global {
