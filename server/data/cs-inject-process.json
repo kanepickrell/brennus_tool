@@ -1,7 +1,9 @@
 {
   "_key": "cs-inject-process",
   "name": "Inject Process",
-  "description": "Inject beacon shellcode into a running process by PID to migrate or elevate context",
+  "tactic": "TA0004",
+  "icon": "🔀",
+  "description": "Inject beacon into target process PID via Cobalt Strike",
   "executionType": "cobalt_strike",
   "estimatedDuration": 10,
   "inputs": [
@@ -17,7 +19,7 @@
       "id": "injected_session",
       "label": "Injected Session",
       "type": "session",
-      "description": "Session in new process context"
+      "description": "Session running inside target process"
     }
   ],
   "parameters": [
@@ -31,11 +33,11 @@
     },
     {
       "id": "pid",
-      "label": "Target PID",
-      "type": "number",
+      "label": "PID",
+      "type": "string",
       "required": true,
-      "placeholder": "1234",
-      "default": 1234
+      "placeholder": "${EXPLORER_PID}",
+      "default": "${EXPLORER_PID}"
     },
     {
       "id": "listener",
@@ -44,20 +46,33 @@
       "required": true,
       "placeholder": "${HTTP_LISTENER}",
       "default": "${HTTP_LISTENER}"
+    },
+    {
+      "id": "arch",
+      "label": "Arch",
+      "type": "select",
+      "required": false,
+      "options": [
+        "x64",
+        "x86"
+      ],
+      "default": "x64"
     }
   ],
   "requirements": {
     "c2Server": true,
-    "listeners": [],
+    "listeners": [
+      "HTTP"
+    ],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Inject Process",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -75,15 +90,19 @@
         "position": 3,
         "variableRef": true,
         "variableName": "HTTP_LISTENER"
+      },
+      {
+        "param": "arch",
+        "position": 4,
+        "variableRef": true,
+        "variableName": "ARCH"
       }
     ],
-    "pythonCall": "run Binject",
-    "documentation": "Inject beacon into process by PID",
+    "preKeywordLog": "=== Injecting into PID: ${pid} ===",
+    "documentation": "Process injection via beacon",
     "tags": [
       "privilege-escalation",
       "injection"
     ]
-  },
-  "tactic": "TA0004",
-  "icon": "\ud83d\udc51"
+  }
 }

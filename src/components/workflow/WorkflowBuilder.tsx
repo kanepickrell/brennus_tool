@@ -93,24 +93,25 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
 
   const [executionLog, setExecutionLog] = useState<ExecutionLogEntry[]>([]);
   const [globalSettings, setGlobalSettings] = useState<OpforGlobalSettings>({
-    executionPlanName: 'Neon Saguaro',
-    targetNetwork: '',
-    c2Server: '10.50.100.5',
-    sessionId: 'session_01',
-    operator: '',
-    redTeam: '',
-    notes: '',
-    workdir: '%{HOME}/sandworm/',
-    csUser: 'operator',
-    csPass: '',
-    csDir: '/opt/cobaltstrike',
-    csPort: '50050',
-    localInitialBeacon: '${WORKDIR}update.exe',
-    target1: '172.16.2.5',
-    target2: '172.16.2.3',
-    artifactDir: 'artifact',
-    debugMode: '${False}',
+    // Campaign identity
+    executionPlanName: 'Hunt 1',
+    targetNetwork:     '',
+    sessionId:         'session_01',
+    operator:          '',
+    redTeam:           '',
+    notes:             '',
+    // C2 teamserver
+    c2Server:  '202.84.73.4',
+    csUser:    'bah',
+    csPass:    '',
+    csDir:     '/opt/cobaltstrike',
+    csPort:    '50050',
+    // Operator environment — %{HOME} is Robot Framework env var syntax
+    workdir:    '%{HOME}/sandworm/',
+    debugMode:  '${False}',
     sudoNeeded: '${False}',
+    // Note: ARTIFACT_DIR auto-generated as artifact/<campaign-slug>
+    // TARGET1, TARGET2, LOCAL_INITIAL_BEACON declared by their canvas nodes
   });
 
   // ── Seed globalSettings from campaign config on mount ──────────────────────

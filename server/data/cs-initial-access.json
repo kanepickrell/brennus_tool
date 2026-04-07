@@ -10,6 +10,13 @@
       "label": "Payload Ready",
       "type": "boolean",
       "required": true
+    },
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false,
+      "description": "Optional signal from upstream node"
     }
   ],
   "outputs": [
@@ -55,13 +62,17 @@
       "update"
     ],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py",
+      "SSHLibrary",
+      "SCPLibrary"
     ]
   },
   "robotFramework": {
     "keyword": "Initial Access",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py",
+      "SSHLibrary",
+      "SCPLibrary"
     ],
     "keywordArgs": [
       {

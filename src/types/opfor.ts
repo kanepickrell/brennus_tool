@@ -188,16 +188,17 @@ export interface ExecutionLogEntry {
 }
 
 export interface OpforGlobalSettings {
-  // === Core Settings (existing) ===
+  // === Campaign Identity ===
   executionPlanName: string;
   targetNetwork: string;
-  c2Server: string;
   sessionId: string;
   operator: string;
   redTeam: string;
   notes: string;
-  
-  // === C2 Configuration (new) ===
+
+  // === C2 Server ===
+  /** Teamserver IP — used by cs-start-c2 Suite Setup */
+  c2Server: string;
   /** Cobalt Strike username */
   csUser?: string;
   /** Cobalt Strike password */
@@ -206,43 +207,30 @@ export interface OpforGlobalSettings {
   csDir?: string;
   /** Cobalt Strike team server port */
   csPort?: string;
-  
-  // === Target Configuration (new) ===
-  /** Primary target IP address */
-  targetIp?: string;
-  /** Target username for authentication */
-  targetUser?: string;
-  /** Target password for authentication */
-  targetPass?: string;
-  /** Target domain */
-  targetDomain?: string;
-  
-  // === Working Directory ===
-  /** Working directory for payloads and artifacts */
+
+  // === Operator Working Directory ===
+  /** Operator-side working directory for payloads and artifacts.
+   *  Use Robot Framework env-var syntax: %{HOME}/sandworm/
+   *  Exposed as ${WORKDIR} in every generated script. */
   workdir?: string;
 
-  // === Payload Configuration (new) ===
-  /** Path to payload storage */
-  payloadPath?: string;
-  /** Payload filename */
-  payloadName?: string;
-  
-  // === Hunt / Campaign Variables ===
-  /** Local path to initial beacon payload, e.g. ${WORKDIR}update.exe */
-  localInitialBeacon?: string;
-  /** Primary target IP (TARGET1) */
-  target1?: string;
-  /** Secondary target IP (TARGET2) — used by lateral movement modules */
-  target2?: string;
-  /** Artifact/log output directory */
-  artifactDir?: string;
-  /** Enable Cobalt Strike debug mode */
+  // === C2 Runtime Flags ===
+  /** Enable Cobalt Strike debug mode — defaults to ${False} */
   debugMode?: string;
-  /** Whether sudo is required to start the teamserver */
+  /** Whether sudo is required to start the teamserver — defaults to ${False} */
   sudoNeeded?: string;
 
-  // === Custom Variables (new) ===
-  /** Additional custom variables for Robot Framework */
+  // === NOTE: The following fields have been moved to individual nodes ===
+  // target1, target2      → cs-initial-access, cs-lateral-psexec (suite-scoped vars)
+  // localInitialBeacon    → derived from cs-generate-payload output (${WORKDIR}${PAYLOAD_NAME}.exe)
+  // artifactDir           → defaulted on cs-start-c2 as artifact/${executionPlanName}
+  // payloadName/Path      → cs-generate-payload node parameters
+  // targetIp/User/Pass    → cs-initial-access node parameters
+  // appDataPath/runKey    → cs-persistence-registry node parameters
+  // arch/scanMethod       → cs-network-enumerate node parameters
+
+  // === Custom Campaign Variables (advanced) ===
+  /** Additional variables injected verbatim into *** Variables *** section */
   customVariables?: Record<string, string>;
 }
 

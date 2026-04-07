@@ -1,0 +1,135 @@
+{
+  "_key": "recon-nmap",
+  "name": "Nmap Scan",
+  "description": "SSH to jump box and run nmap service/version/OS detection against target",
+  "executionType": "ssh",
+  "estimatedDuration": 60,
+  "inputs": [
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false
+    }
+  ],
+  "outputs": [
+    {
+      "id": "done",
+      "label": "Complete",
+      "type": "signal"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "jumpIp",
+      "label": "Jump Box IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "202.84.73.4",
+      "default": "202.84.73.4"
+    },
+    {
+      "id": "jumpUser",
+      "label": "Jump Box User",
+      "type": "string",
+      "required": true,
+      "placeholder": "bah",
+      "default": "bah"
+    },
+    {
+      "id": "jumpPass",
+      "label": "Jump Box Pass",
+      "type": "string",
+      "required": true,
+      "placeholder": "P@ssw0rd",
+      "default": "P@ssw0rd"
+    },
+    {
+      "id": "targetIp",
+      "label": "Target IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "172.16.10.0/24",
+      "default": "172.16.10.0/24"
+    },
+    {
+      "id": "nmapFlags",
+      "label": "Nmap Flags",
+      "type": "string",
+      "required": false,
+      "placeholder": "-sV -sC -O",
+      "default": "-sV -sC -O"
+    }
+  ],
+  "requirements": {
+    "c2Server": false,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "SSHLibrary"
+    ]
+  },
+  "robotFramework": {
+    "libraries": [
+      "SSHLibrary"
+    ],
+    "keyword": "Execute Command",
+    "preKeywordStatements": [
+      "Open Connection    ${NMAP_JUMP_IP}    alias=jump_nmap    escape_ansi=True    timeout=300s",
+      "Login    ${NMAP_JUMP_USER}    ${NMAP_JUMP_PASS}",
+      "${_nmap_cmd}=    Set Variable    nmap ${NMAP_FLAGS} ${NMAP_TARGET}"
+    ],
+    "keywordArgs": [
+      {
+        "variableName": "_nmap_cmd",
+        "position": 1,
+        "variableRef": true
+      },
+      {
+        "staticValue": "output_during_execution=True",
+        "position": 2
+      }
+    ],
+    "captureOutput": "NMAP_OUTPUT",
+    "postKeywordStatements": [
+      "Close Connection",
+      "Log To Console    \\n${NMAP_OUTPUT}"
+    ],
+    "variables": [
+      {
+        "name": "NMAP_JUMP_IP",
+        "fromParam": "jumpIp",
+        "scope": "suite"
+      },
+      {
+        "name": "NMAP_JUMP_USER",
+        "fromParam": "jumpUser",
+        "scope": "suite"
+      },
+      {
+        "name": "NMAP_JUMP_PASS",
+        "fromParam": "jumpPass",
+        "scope": "suite"
+      },
+      {
+        "name": "NMAP_TARGET",
+        "fromParam": "targetIp",
+        "scope": "suite"
+      },
+      {
+        "name": "NMAP_FLAGS",
+        "fromParam": "nmapFlags",
+        "scope": "suite"
+      }
+    ],
+    "preKeywordLog": "=== Nmap ${NMAP_FLAGS} \u2192 ${NMAP_TARGET} ===",
+    "tags": [
+      "recon",
+      "discovery",
+      "nmap",
+      "portscan"
+    ]
+  },
+  "tactic": "TA0043",
+  "icon": "\ud83d\udd0d"
+}

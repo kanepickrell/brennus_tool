@@ -51,13 +51,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Stage Data",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -77,11 +77,25 @@
       }
     ],
     "pythonCall": "Issue Powershell Cmd",
-    "preKeywordLog": "=== Staging Data from ${sourcePath} ===",
+    "preKeywordLog": "=== Staging Data: ${SOURCE_PATH} \u2192 ${DEST_PATH} ===",
     "documentation": "Archive data for exfiltration",
     "tags": [
       "collection",
       "stage"
+    ],
+    "variables": [
+      {
+        "name": "SOURCE_PATH",
+        "fromParam": "sourcePath",
+        "default": "C:\\\\Users\\\\*\\\\Documents",
+        "scope": "suite"
+      },
+      {
+        "name": "DEST_PATH",
+        "fromParam": "destPath",
+        "default": "C:\\\\Windows\\\\Temp\\\\staged.zip",
+        "scope": "suite"
+      }
     ]
   },
   "tactic": "TA0009",

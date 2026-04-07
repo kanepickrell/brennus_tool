@@ -50,11 +50,7 @@
       "label": "Schedule",
       "type": "select",
       "required": false,
-      "options": [
-        "ONSTART",
-        "ONLOGON",
-        "DAILY"
-      ],
+      "options": ["ONSTART", "ONLOGON", "DAILY"],
       "default": "ONSTART"
     }
   ],
@@ -63,13 +59,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Persistence (Schtasks)",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -95,11 +91,8 @@
     ],
     "pythonCall": "Issue Shell Cmd",
     "documentation": "Scheduled task persistence",
-    "tags": [
-      "persistence",
-      "schtasks"
-    ]
+    "tags": ["persistence", "schtasks"]
   },
   "tactic": "TA0003",
-  "icon": "\ud83d\udd12"
+  "icon": "🔒"
 }

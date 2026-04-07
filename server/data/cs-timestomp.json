@@ -51,13 +51,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Timestomp File",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -78,11 +78,8 @@
     ],
     "pythonCall": "Run Btimestomp",
     "documentation": "Modify file timestamps",
-    "tags": [
-      "defense-evasion",
-      "timestomp"
-    ]
+    "tags": ["defense-evasion", "timestomp"]
   },
   "tactic": "TA0005",
-  "icon": "\ud83d\udee1\ufe0f"
+  "icon": "🛡️"
 }

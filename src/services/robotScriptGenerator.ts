@@ -8,6 +8,95 @@
 import { Node, Edge } from '@xyflow/react';
 import { OpforNodeData, OpforGlobalSettings } from '@/types/opfor';
 
+// ── Static library map ────────────────────────────────────────────────────────
+// Maps each module _key to the Robot Framework Library imports it needs.
+// This is the source-of-truth fallback used when a node's robotFramework.libraries
+// is empty (e.g. the node was placed before the updated payload JSON was deployed).
+//
+// Rules:
+//   - cobaltstrikec2/cobaltstrike.py is needed by every CS module.
+//   - SSHLibrary + SCPLibrary are ONLY needed by cs-initial-access (SCP delivery).
+//   - Process, OperatingSystem, Collections, DateTime, String, CSVLibrary,
+//     LogLibrary.py are internal to the cobaltstrike.py library itself —
+//     they do NOT need to be imported at the .robot level.
+//   - Add new module keys here whenever a new payload JSON is created.
+// ─────────────────────────────────────────────────────────────────────────────
+const MODULE_LIBRARIES: Record<string, string[]> = {
+  'cs-start-c2':              ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-stop-c2':               ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-create-listener':       ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-generate-payload':      ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-initial-access':        ['cobaltstrikec2/cobaltstrike.py', 'SSHLibrary', 'SCPLibrary'],
+  'cs-session-sleep':         ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-upload-file':           ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-timestomp':             ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-stop-service':          ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-stage-data':            ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-query-registry':        ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-persistence-schtasks':  ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-persistence-registry':  ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-lateral-psexec':        ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-lateral-winrm':         ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-dump-credentials':      ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-elevate-spawnas':       ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-inject-process':        ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-get-processes':         ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-getuid':                ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-get-pwd':               ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-get-arp':               ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-list-directory':        ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-network-enumerate':     ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-move-beacon':           ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-copy-beacon':           ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-delete-file':           ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-download-file':         ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-get-session-by-ip':     ['cobaltstrikec2/cobaltstrike.py'],
+  'cs-kill-session':          ['cobaltstrikec2/cobaltstrike.py'],
+  'brute-sim':                ['cobaltstrikec2/cobaltstrike.py'],
+  'screenshot':               ['cobaltstrikec2/cobaltstrike.py'],
+};
+
+// ── Static suite-variable fallback map ───────────────────────────────────────
+// Mirrors the robotFramework.variables[] arrays in each payload JSON.
+// Used as a Tier 3 fallback when a node was placed on canvas BEFORE the current
+// payload JSON was deployed (stale baked-in definition). The generator merges
+// these defaults into the node's variable block when the node's own variables
+// array is empty or missing the key.
+//
+// Entry format:  moduleKey → [ { name, fromParam?, default? } ]
+// fromParam: read from node.parameters[fromParam] at generation time
+// default:   hardcoded fallback value
+// ─────────────────────────────────────────────────────────────────────────────
+interface StaticVarDef { name: string; fromParam?: string; default?: string; scope: 'suite' }
+const MODULE_SUITE_VARS: Record<string, StaticVarDef[]> = {
+  'cs-create-listener': [
+    { name: 'HTTP_LISTENER',      fromParam: 'listenerName',  default: 'HTTP',         scope: 'suite' },
+    { name: 'HTTP_LISTENER_PORT', fromParam: 'listenerPort',  default: '80',           scope: 'suite' },
+    { name: 'HTTP_LISTENER_TYPE', fromParam: 'listenerType',  default: 'Beacon_HTTP',  scope: 'suite' },
+  ],
+  'cs-generate-payload': [
+    { name: 'HTTP_PAYLOAD_NAME', fromParam: 'payloadName', default: 'update', scope: 'suite' },
+  ],
+  'cs-initial-access': [
+    { name: 'TARGET1', fromParam: 'targetIp', default: '172.16.2.5', scope: 'suite' },
+  ],
+  'cs-lateral-psexec': [
+    { name: 'TARGET2', fromParam: 'targetIp', default: '172.16.2.3', scope: 'suite' },
+  ],
+  'cs-persistence-registry': [
+    { name: 'APPDATA_PATH', fromParam: 'appdataPath', default: 'AppData\\Local\\Temp',                                            scope: 'suite' },
+    { name: 'RUN_KEY',      fromParam: 'runKey',       default: 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', scope: 'suite' },
+  ],
+  'cs-network-enumerate': [
+    { name: 'SCAN_METHOD', fromParam: 'scanMethod', default: 'portscan', scope: 'suite' },
+    { name: 'ARCH',        fromParam: 'arch',        default: 'x64',     scope: 'suite' },
+  ],
+  'cs-stage-data': [
+    { name: 'SOURCE_PATH', fromParam: 'sourcePath', default: 'C:\\Users\\*\\Documents',         scope: 'suite' },
+    { name: 'DEST_PATH',   fromParam: 'destPath',   default: 'C:\\Windows\\Temp\\staged.zip',  scope: 'suite' },
+  ],
+};
+
 /**
  * Generated Robot Framework script sections
  */
@@ -211,19 +300,20 @@ function getParameterValue(
 }
 
 function getGlobalSetting(key: string, globalSettings: OpforGlobalSettings): string {
+  // ARTIFACT_DIR uses the same slug logic as generateVariables
+  const campaignSlug = (globalSettings.executionPlanName || 'campaign')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+
   const mapping: Record<string, string | undefined> = {
     'CS_IP':        globalSettings.c2Server,
     'CS_USER':      globalSettings.csUser,
     'CS_PASS':      globalSettings.csPass,
     'CS_DIR':       globalSettings.csDir,
     'CS_PORT':      globalSettings.csPort,
-    'TARGET_IP':    globalSettings.targetIp,
-    'TARGET_USER':  globalSettings.targetUser,
-    'TARGET_PASS':  globalSettings.targetPass,
-    'TARGET_DOMAIN':globalSettings.targetDomain,
     'WORKDIR':      globalSettings.workdir,
-    // New entries that Setup C2 needs
-    'ARTIFACT_DIR': globalSettings.artifactDir ?? 'artifact',
+    'ARTIFACT_DIR': globalSettings.artifactDir ?? `artifact/${campaignSlug}`,
     'DEBUG_MODE':   globalSettings.debugMode   ?? '${False}',
     'SUDO_NEEDED':  globalSettings.sudoNeeded  ?? '${False}',
   };
@@ -280,19 +370,40 @@ function substituteStatementVariables(
 ): string {
   let result = statement;
 
+  // Build merged variable list: robotConfig.variables + MODULE_SUITE_VARS fallback
+  // This ensures log strings work even for stale canvas nodes with empty variables arrays.
+  const moduleId = (instance.node.data as OpforNodeData).definition;
+  const moduleKey = (moduleId as any)._key || (moduleId as any).id || '';
+  const staticVarDefs = MODULE_SUITE_VARS[moduleKey] ?? [];
+  const ownVarNames = new Set((robotConfig.variables ?? []).map(v => v.name));
+  const allVarDefs = [
+    ...(robotConfig.variables ?? []),
+    ...staticVarDefs.filter(sv => !ownVarNames.has(sv.name)),
+  ];
 
-  robotConfig.variables?.forEach(varDef => {
+  allVarDefs.forEach(varDef => {
     const baseVar = `\${${varDef.name}}`;
     const instanceVar = `\${${getInstanceVariableName(varDef.name, instance.variablePrefix)}}`;
     result = result.split(baseVar).join(instanceVar);
   });
 
-  robotConfig.variables?.forEach(varDef => {
+  allVarDefs.forEach(varDef => {
     if (varDef.fromParam) {
       const paramVar = `\${${varDef.fromParam}}`;
       const instanceVar = `\${${getInstanceVariableName(varDef.name, instance.variablePrefix)}}`;
       result = result.split(paramVar).join(instanceVar);
     }
+  });
+
+  // Legacy variable name remaps — stale canvas nodes may have old names baked
+  // into preKeywordLog strings. Remap them to their current canonical names.
+  const LEGACY_VAR_RENAMES: Record<string, string> = {
+    'PERSISTENCE_KEY': 'RUN_KEY',   // cs-persistence-registry rename
+    'PAYLOAD_NAME':    'HTTP_PAYLOAD_NAME',
+    'LISTENER_NAME':   'HTTP_LISTENER',
+  };
+  Object.entries(LEGACY_VAR_RENAMES).forEach(([oldName, newName]) => {
+    result = result.split(`\${${oldName}}`).join(`\${${newName}}`);
   });
 
   if (robotConfig.captureOutput) {
@@ -366,63 +477,73 @@ function generateSettings(
 ): { content: string; warnings: string[] } {
   const warnings: string[] = [];
   const libraries = new Set<string>();
-  const resources = new Set<string>();
-
+  const resources = new Set<string>();   // kept for future use, currently empty
+ 
   let suiteSetupNode: Node | null = null;
   let suiteTeardownNode: Node | null = null;
-
+ 
   allNodes.forEach(node => {
     const data = node.data as OpforNodeData;
     const robotConfig = data.definition.robotFramework as RobotFrameworkConfig | undefined;
-
+ 
     if (!robotConfig) {
       warnings.push(`Node "${data.definition.name}" missing robotFramework config`);
       return;
     }
+ 
+    // ── Collect Library imports — three-tier resolution ───────────────────
+    // Tier 1: robotFramework.libraries[] on the node def (set when payload was
+    //         fetched fresh via getModulePayload at drop time).
+    // Tier 2: requirements.libraries[] on the node def, minus hunt_1.resource
+    //         (also from the payload JSON, same condition as tier 1).
+    // Tier 3: MODULE_LIBRARIES static map keyed by _key — always available,
+    //         covers nodes placed before updated JSONs were deployed (stale
+    //         canvas definitions baked into localStorage autosave).
+    const moduleKey: string = (data.definition as any)._key || data.definition.id || '';
 
-    if (robotConfig.libraries) robotConfig.libraries.forEach(lib => libraries.add(lib));
-    if (robotConfig.resources) robotConfig.resources.forEach(res => resources.add(res));
+    const rfLibs: string[] = robotConfig.libraries ?? [];
+    const reqLibs: string[] = (
+      (data.definition.requirements as any)?.libraries ?? []
+    ).filter((l: string) => l !== 'hunt_1.resource');
+    const staticLibs: string[] = MODULE_LIBRARIES[moduleKey] ?? [];
 
+    const nodeLibraries =
+      rfLibs.length  > 0 ? rfLibs  :
+      reqLibs.length > 0 ? reqLibs :
+      staticLibs;
+
+    nodeLibraries.forEach(lib => libraries.add(lib));
+
+    // Resource imports — kept for extensibility, hunt_1.resource excluded.
+    if (robotConfig.resources) {
+      robotConfig.resources
+        .filter(r => r !== 'hunt_1.resource')
+        .forEach(r => resources.add(r));
+    }
+ 
     if (robotConfig.isSuiteSetup)    suiteSetupNode    = node;
     if (robotConfig.isSuiteTeardown) suiteTeardownNode = node;
   });
-
-  // When hunt_1.resource is imported, inject all libraries it depends on.
-  // hunt_1.resource itself doesn't declare these — the calling .robot file must.
-  if (resources.has('hunt_1.resource')) {
-    [
-      'cobaltstrikec2/cobaltstrike.py',
-      'LogLibrary.py',
-      'Process',
-      'OperatingSystem',
-      'Collections',
-      'DateTime',
-      'SSHLibrary',
-      'String',
-      'SCPLibrary',
-      'CSVLibrary',
-    ].forEach(lib => libraries.add(lib));
-  }
-
+ 
   const lines: string[] = [
     '*** Settings ***',
     `Documentation       ${globalSettings.executionPlanName || 'Generated Workflow'}`,
     '',
   ];
-
-  // Libraries
+ 
+  // Libraries — sorted for deterministic output
   Array.from(libraries).sort().forEach(lib => {
     lines.push(`Library             ${lib}`);
   });
-
-  // Resources
+ 
+  // Resources (empty in standard CS campaigns, but respected if present)
   if (resources.size > 0) {
     if (libraries.size > 0) lines.push('');
     Array.from(resources).sort().forEach(res => {
       lines.push(`Resource            ${res}`);
     });
   }
-
+ 
   // Suite Setup
   if (suiteSetupNode) {
     const data = (suiteSetupNode as Node).data as OpforNodeData;
@@ -436,7 +557,7 @@ function generateSettings(
     );
     lines.push(...setupLines);
   }
-
+ 
   // Suite Teardown
   if (suiteTeardownNode) {
     const data = (suiteTeardownNode as Node).data as OpforNodeData;
@@ -450,7 +571,7 @@ function generateSettings(
     );
     lines.push(...teardownLines);
   }
-
+ 
   return { content: lines.join('\n'), warnings };
 }
 
@@ -463,25 +584,44 @@ function generateVariables(
 ): string {
   const lines: string[] = ['*** Variables ***'];
 
-  // C2 / infrastructure variables from globalSettings
+  // ── C2 Infrastructure Variables ───────────────────────────────────────────
+  // Only true campaign-level config lives here.
+  // Target IPs, payload names, beacon paths are declared by their respective
+  // nodes as suite-scoped variables in the per-node blocks below.
   const c2Vars: Array<{ name: string; value: string }> = [];
 
-  if (globalSettings.workdir)    c2Vars.push({ name: 'WORKDIR',      value: globalSettings.workdir });
-  if (globalSettings.c2Server)   c2Vars.push({ name: 'CS_IP',        value: globalSettings.c2Server });
-  if (globalSettings.csUser)     c2Vars.push({ name: 'CS_USER',      value: globalSettings.csUser });
-  // if (globalSettings.csPass)     c2Vars.push({ name: 'CS_PASS', value: globalSettings.csPass || '' });
+  if (globalSettings.workdir)    c2Vars.push({ name: 'WORKDIR',  value: globalSettings.workdir });
+  if (globalSettings.c2Server)   c2Vars.push({ name: 'CS_IP',    value: globalSettings.c2Server });
+  if (globalSettings.csUser)     c2Vars.push({ name: 'CS_USER',  value: globalSettings.csUser });
   c2Vars.push({ name: 'CS_PASS', value: globalSettings.csPass || '' });
-  if (globalSettings.csDir)      c2Vars.push({ name: 'CS_DIR',       value: globalSettings.csDir });
-  if (globalSettings.csPort)     c2Vars.push({ name: 'CS_PORT',      value: globalSettings.csPort });
+  if (globalSettings.csDir)      c2Vars.push({ name: 'CS_DIR',   value: globalSettings.csDir });
+  if (globalSettings.csPort)     c2Vars.push({ name: 'CS_PORT',  value: globalSettings.csPort });
 
-  // Always emit these so Setup C2 never hits an undefined variable
-  c2Vars.push({ name: 'ARTIFACT_DIR',        value: globalSettings.artifactDir        ?? 'artifact' });
-  c2Vars.push({ name: 'DEBUG_MODE',          value: globalSettings.debugMode          ?? '${False}' });
-  c2Vars.push({ name: 'SUDO_NEEDED',         value: globalSettings.sudoNeeded         ?? '${False}' });
-  c2Vars.push({ name: 'LOCAL_INITIAL_BEACON',value: globalSettings.localInitialBeacon ?? '${WORKDIR}update.exe' });
-  if (globalSettings.target2) {
-    c2Vars.push({ name: 'TARGET2', value: globalSettings.target2 });
-  }
+  // ARTIFACT_DIR — defaults to artifact/<campaign-name> so each campaign gets
+  // its own folder. Slugify the name to make it filesystem-safe.
+  const campaignSlug = (globalSettings.executionPlanName || 'campaign')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+  const artifactDir = globalSettings.artifactDir ?? `artifact/${campaignSlug}`;
+  c2Vars.push({ name: 'ARTIFACT_DIR', value: artifactDir });
+  c2Vars.push({ name: 'DEBUG_MODE',   value: globalSettings.debugMode  ?? '${False}' });
+  c2Vars.push({ name: 'SUDO_NEEDED',  value: globalSettings.sudoNeeded ?? '${False}' });
+
+  // LOCAL_INITIAL_BEACON — derived from WORKDIR + the payload name produced by
+  // cs-generate-payload. Defaults to ${WORKDIR}update.exe if no payload node
+  // is on canvas. When cs-generate-payload is present its HTTP_PAYLOAD_NAME
+  // variable is declared in the per-node block below, but we still need this
+  // global reference so cs-initial-access can use it before the payload keyword
+  // runs in the test body.
+  const payloadNode = allNodes.find(n =>
+    ((n.data as OpforNodeData).definition as any)._key === 'cs-generate-payload' ||
+    (n.data as OpforNodeData).definition.id === 'cs-generate-payload'
+  );
+  const payloadName = payloadNode
+    ? ((payloadNode.data as OpforNodeData).parameters?.payloadName ?? 'update')
+    : 'update';
+  c2Vars.push({ name: 'LOCAL_INITIAL_BEACON', value: `\${WORKDIR}${payloadName}.exe` });
 
   if (c2Vars.length > 0) {
     lines.push('# C2 Server Configuration');
@@ -499,18 +639,41 @@ function generateVariables(
     const robotConfig = data.definition.robotFramework as RobotFrameworkConfig | undefined;
     const instance = nodeInstances.get(node.id);
 
-    if (!robotConfig?.variables || !instance) return;
+    if (!instance) return;
 
     const blockVars: Array<{ name: string; value: string | number }> = [];
 
-    robotConfig.variables.forEach(varDef => {
-      if (varDef.scope === 'suite' || varDef.scope === 'global') {
+    // Determine which variable definitions to use:
+    //   1. Node's own robotConfig.variables (fresh drop with current payload JSON)
+    //   2. MODULE_SUITE_VARS static fallback (stale canvas node)
+    const moduleId = (data.definition as any)._key || data.definition.id || '';
+    const ownVars: VariableDefinition[] = robotConfig?.variables ?? [];
+    const staticVars: StaticVarDef[] = MODULE_SUITE_VARS[moduleId] ?? [];
+
+    // Build a merged set: ownVars take priority; fill gaps from staticVars
+    const ownVarNames = new Set(ownVars.map(v => v.name));
+    const mergedVars: Array<{ name: string; fromParam?: string; default?: string; fromGlobalSetting?: string }> = [
+      ...ownVars,
+      ...staticVars.filter(sv => !ownVarNames.has(sv.name)),
+    ];
+
+    mergedVars.forEach(varDef => {
+      // ownVars entries have a scope field; staticVars are always suite-scoped
+      const scope = (varDef as VariableDefinition).scope ?? 'suite';
+      if (scope === 'suite' || scope === 'global') {
         let value: string | number | undefined;
 
         if (varDef.fromParam) {
-          value = getParameterValue(varDef.fromParam, data);
-        } else if (varDef.fromGlobalSetting) {
-          value = getGlobalSetting(varDef.fromGlobalSetting, globalSettings);
+          // Try to read from node params first; fall back to static default
+          // so stale canvas nodes (where params may be empty) still emit variables.
+          // Reject Robot variable references (${...}) as param values — these are
+          // template placeholders, not real values (e.g. targetIp = "${TARGET2}").
+          const rawParamValue = getParameterValue(varDef.fromParam, data);
+          const isRobotVarRef = typeof rawParamValue === 'string'
+            && rawParamValue.startsWith('${') && rawParamValue.endsWith('}');
+          value = (!isRobotVarRef ? rawParamValue : undefined) ?? varDef.default;
+        } else if ((varDef as VariableDefinition).fromGlobalSetting) {
+          value = getGlobalSetting((varDef as VariableDefinition).fromGlobalSetting!, globalSettings);
         } else {
           value = varDef.default;
         }
@@ -752,13 +915,21 @@ export function generateRobotScript(
   const nodeInstances = buildNodeInstances(validNodes);
   const connectionContext = buildConnectionContext(edges);
 
-  // Warn on duplicate module instances
+  // Modules that are legitimately reused across the chain — suppress duplicate warnings.
+  const MULTI_INSTANCE_OK = new Set([
+    'cs-session-sleep', 'cs-get-processes', 'cs-query-registry',
+    'cs-list-directory', 'cs-get-arp', 'cs-getuid', 'cs-get-pwd',
+    'cs-network-enumerate', 'cs-upload-file', 'cs-delete-file',
+    'cs-create-listener', 'cs-generate-payload',
+  ]);
+
+  // Warn on duplicate module instances (skip known-safe reuse)
   const instanceCounts = new Map<string, number>();
   nodeInstances.forEach(inst => {
     instanceCounts.set(inst.moduleId, Math.max(instanceCounts.get(inst.moduleId) || 0, inst.instanceIndex));
   });
   instanceCounts.forEach((count, moduleId) => {
-    if (count > 1) {
+    if (count > 1 && !MULTI_INSTANCE_OK.has(moduleId)) {
       warnings.push(`Multiple instances of "${moduleId}": ${count} (variables suffixed _2, _3, etc.)`);
     }
   });

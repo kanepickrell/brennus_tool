@@ -1,0 +1,134 @@
+{
+  "_key": "recon-ping-sweep",
+  "name": "Ping Sweep",
+  "description": "SSH to jump box and run ping sweep script against target subnet",
+  "executionType": "ssh",
+  "estimatedDuration": 30,
+  "inputs": [
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false
+    }
+  ],
+  "outputs": [
+    {
+      "id": "done",
+      "label": "Complete",
+      "type": "signal"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "jumpIp",
+      "label": "Jump Box IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "202.84.73.4",
+      "default": "202.84.73.4"
+    },
+    {
+      "id": "jumpUser",
+      "label": "Jump Box User",
+      "type": "string",
+      "required": true,
+      "placeholder": "bah",
+      "default": "bah"
+    },
+    {
+      "id": "jumpPass",
+      "label": "Jump Box Pass",
+      "type": "string",
+      "required": true,
+      "placeholder": "P@ssw0rd",
+      "default": "P@ssw0rd"
+    },
+    {
+      "id": "targetOctet",
+      "label": "Target Subnet",
+      "type": "string",
+      "required": true,
+      "placeholder": "172.16.10",
+      "default": "172.16.10"
+    },
+    {
+      "id": "scriptPath",
+      "label": "Script Path",
+      "type": "string",
+      "required": false,
+      "placeholder": "/home/bah/Projects/automation-utilities/artifact/pingSweep.sh",
+      "default": "/home/bah/Projects/automation-utilities/artifact/pingSweep.sh"
+    }
+  ],
+  "requirements": {
+    "c2Server": false,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "SSHLibrary"
+    ]
+  },
+  "robotFramework": {
+    "libraries": [
+      "SSHLibrary"
+    ],
+    "keyword": "Execute Command",
+    "preKeywordStatements": [
+      "Open Connection    ${JUMP_IP}    alias=jump_ping_sweep    escape_ansi=True    timeout=300s",
+      "Login    ${JUMP_USER}    ${JUMP_PASS}",
+      "${_sweep_cmd}=    Set Variable    bash ${PING_SWEEP_SCRIPT} ${PING_TARGET_OCTET}"
+    ],
+    "keywordArgs": [
+      {
+        "variableName": "_sweep_cmd",
+        "position": 1,
+        "variableRef": true
+      },
+      {
+        "staticValue": "output_during_execution=True",
+        "position": 2
+      }
+    ],
+    "captureOutput": "PING_SWEEP_OUTPUT",
+    "postKeywordStatements": [
+      "Close Connection",
+      "Log To Console    \\n${PING_SWEEP_OUTPUT}"
+    ],
+    "variables": [
+      {
+        "name": "JUMP_IP",
+        "fromParam": "jumpIp",
+        "scope": "suite"
+      },
+      {
+        "name": "JUMP_USER",
+        "fromParam": "jumpUser",
+        "scope": "suite"
+      },
+      {
+        "name": "JUMP_PASS",
+        "fromParam": "jumpPass",
+        "scope": "suite"
+      },
+      {
+        "name": "PING_TARGET_OCTET",
+        "fromParam": "targetOctet",
+        "scope": "suite"
+      },
+      {
+        "name": "PING_SWEEP_SCRIPT",
+        "fromParam": "scriptPath",
+        "scope": "suite"
+      }
+    ],
+    "preKeywordLog": "=== Ping Sweep \u2192 ${PING_TARGET_OCTET}.0/24 ===",
+    "tags": [
+      "recon",
+      "discovery",
+      "ping"
+    ]
+  },
+  "tactic": "TA0043",
+  "icon": "\ud83d\udce1"
+}

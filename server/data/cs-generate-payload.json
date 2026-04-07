@@ -2,7 +2,7 @@
   "_key": "cs-generate-payload",
   "name": "Generate Payload",
   "tactic": "TA0042",
-  "icon": "\ud83c\udfd7\ufe0f",
+  "icon": "🏗️",
   "description": "Generate a Cobalt Strike beacon payload using Create Payload with specified listener and template",
   "executionType": "cobalt_strike",
   "estimatedDuration": 30,
@@ -36,12 +36,7 @@
       "label": "Template",
       "type": "select",
       "required": true,
-      "options": [
-        "exe",
-        "dll",
-        "powershell",
-        "raw"
-      ],
+      "options": ["exe", "dll", "powershell", "raw"],
       "default": "exe"
     },
     {
@@ -71,18 +66,16 @@
   ],
   "requirements": {
     "c2Server": true,
-    "listeners": [
-      "HTTP"
-    ],
+    "listeners": ["HTTP"],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Generate Payload",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -123,9 +116,6 @@
     "captureOutput": "PAYLOAD_PATH",
     "postKeywordLog": "=== Payload Location: ${PAYLOAD_PATH} ===",
     "documentation": "Generate beacon payload",
-    "tags": [
-      "resource-development",
-      "payload"
-    ]
+    "tags": ["resource-development", "payload"]
   }
 }

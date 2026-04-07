@@ -1,0 +1,141 @@
+{
+  "_key": "ssh-linux-exec",
+  "name": "Run Linux Command",
+  "description": "SSH to a Linux host, execute a bash command, capture output, close connection",
+  "executionType": "ssh",
+  "estimatedDuration": 10,
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "done",
+      "label": "Complete",
+      "type": "signal",
+      "description": "Node completed \u2014 chain continues"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "hostIp",
+      "label": "Host IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "202.84.73.4",
+      "default": "202.84.73.4"
+    },
+    {
+      "id": "hostUser",
+      "label": "Username",
+      "type": "string",
+      "required": true,
+      "placeholder": "bah",
+      "default": "bah"
+    },
+    {
+      "id": "hostPass",
+      "label": "Password",
+      "type": "string",
+      "required": true,
+      "placeholder": "P@ssw0rd",
+      "default": "P@ssw0rd"
+    },
+    {
+      "id": "command",
+      "label": "Command",
+      "type": "string",
+      "required": true,
+      "placeholder": "whoami",
+      "default": "whoami"
+    },
+    {
+      "id": "alias",
+      "label": "Session Alias",
+      "type": "string",
+      "required": false,
+      "placeholder": "linux_host",
+      "default": "linux_host"
+    },
+    {
+      "id": "timeout",
+      "label": "Timeout (s)",
+      "type": "string",
+      "required": false,
+      "placeholder": "300s",
+      "default": "300s"
+    }
+  ],
+  "requirements": {
+    "c2Server": false,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "SSHLibrary"
+    ]
+  },
+  "robotFramework": {
+    "libraries": [
+      "SSHLibrary"
+    ],
+    "keyword": "Execute Command",
+    "preKeywordStatements": [
+      "Open Connection    ${SSH_HOST}    alias=${SSH_ALIAS}    escape_ansi=True    timeout=${SSH_TIMEOUT}",
+      "Login    ${SSH_USER}    ${SSH_PASS}"
+    ],
+    "keywordArgs": [
+      {
+        "param": "command",
+        "position": 1,
+        "variableRef": true,
+        "variableName": "SSH_COMMAND"
+      },
+      {
+        "staticValue": "output_during_execution=True",
+        "position": 2
+      }
+    ],
+    "captureOutput": "SSH_OUTPUT",
+    "postKeywordStatements": [
+      "Close Connection",
+      "Log To Console    \\n${SSH_OUTPUT}"
+    ],
+    "variables": [
+      {
+        "name": "SSH_HOST",
+        "fromParam": "hostIp",
+        "scope": "suite"
+      },
+      {
+        "name": "SSH_USER",
+        "fromParam": "hostUser",
+        "scope": "suite"
+      },
+      {
+        "name": "SSH_PASS",
+        "fromParam": "hostPass",
+        "scope": "suite"
+      },
+      {
+        "name": "SSH_COMMAND",
+        "fromParam": "command",
+        "scope": "suite"
+      },
+      {
+        "name": "SSH_ALIAS",
+        "fromParam": "alias",
+        "scope": "suite"
+      },
+      {
+        "name": "SSH_TIMEOUT",
+        "fromParam": "timeout",
+        "scope": "suite"
+      }
+    ],
+    "preKeywordLog": "=== SSH \u2192 ${SSH_HOST} | ${SSH_COMMAND} ===",
+    "tags": [
+      "ssh",
+      "execution",
+      "linux"
+    ]
+  },
+  "tactic": "TA0002",
+  "icon": "\ud83d\udc27"
+}

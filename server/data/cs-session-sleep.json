@@ -43,13 +43,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Session Sleep",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -70,11 +70,8 @@
     ],
     "pythonCall": "Session Sleep",
     "documentation": "Set beacon sleep and jitter",
-    "tags": [
-      "c2",
-      "evasion"
-    ]
+    "tags": ["c2", "evasion"]
   },
   "tactic": "TA0011",
-  "icon": "\ud83d\udce1"
+  "icon": "📡"
 }

@@ -1,0 +1,142 @@
+{
+  "_key": "ssh-windows-exec",
+  "name": "Run PowerShell Command",
+  "description": "SSH to a Windows host, drop into PowerShell, execute command, capture output, close connection",
+  "executionType": "ssh",
+  "estimatedDuration": 15,
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "done",
+      "label": "Complete",
+      "type": "signal",
+      "description": "Node completed \u2014 chain continues"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "hostIp",
+      "label": "Host IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "172.16.2.5",
+      "default": "172.16.2.5"
+    },
+    {
+      "id": "hostUser",
+      "label": "Username",
+      "type": "string",
+      "required": true,
+      "placeholder": "Administrator",
+      "default": "Administrator"
+    },
+    {
+      "id": "hostPass",
+      "label": "Password",
+      "type": "string",
+      "required": true,
+      "placeholder": "P@ssw0rd",
+      "default": "P@ssw0rd"
+    },
+    {
+      "id": "command",
+      "label": "PS Command",
+      "type": "string",
+      "required": true,
+      "placeholder": "Get-Process",
+      "default": "Get-Process"
+    },
+    {
+      "id": "alias",
+      "label": "Session Alias",
+      "type": "string",
+      "required": false,
+      "placeholder": "windows_host",
+      "default": "windows_host"
+    },
+    {
+      "id": "timeout",
+      "label": "Timeout (s)",
+      "type": "string",
+      "required": false,
+      "placeholder": "300s",
+      "default": "300s"
+    }
+  ],
+  "requirements": {
+    "c2Server": false,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "SSHLibrary"
+    ]
+  },
+  "robotFramework": {
+    "libraries": [
+      "SSHLibrary"
+    ],
+    "keyword": "Write",
+    "preKeywordStatements": [
+      "Open Connection    ${WIN_HOST}    newline=CRLF    alias=${WIN_ALIAS}    escape_ansi=True    timeout=${WIN_TIMEOUT}",
+      "Login    ${WIN_USER}    ${WIN_PASS}",
+      "Write    powershell -NoLogo -NoExit",
+      "${_ps_prompt}=    Read Until Regexp    PS .*>"
+    ],
+    "keywordArgs": [
+      {
+        "param": "command",
+        "position": 1,
+        "variableRef": true,
+        "variableName": "WIN_COMMAND"
+      }
+    ],
+    "postKeywordStatements": [
+      "Sleep    5s",
+      "${WIN_OUTPUT}=    Read    delay=5s",
+      "Log To Console    \\n${WIN_OUTPUT}",
+      "Close Connection"
+    ],
+    "captureOutput": null,
+    "variables": [
+      {
+        "name": "WIN_HOST",
+        "fromParam": "hostIp",
+        "scope": "suite"
+      },
+      {
+        "name": "WIN_USER",
+        "fromParam": "hostUser",
+        "scope": "suite"
+      },
+      {
+        "name": "WIN_PASS",
+        "fromParam": "hostPass",
+        "scope": "suite"
+      },
+      {
+        "name": "WIN_COMMAND",
+        "fromParam": "command",
+        "scope": "suite"
+      },
+      {
+        "name": "WIN_ALIAS",
+        "fromParam": "alias",
+        "scope": "suite"
+      },
+      {
+        "name": "WIN_TIMEOUT",
+        "fromParam": "timeout",
+        "scope": "suite"
+      }
+    ],
+    "preKeywordLog": "=== PowerShell \u2192 ${WIN_HOST} | ${WIN_COMMAND} ===",
+    "tags": [
+      "ssh",
+      "execution",
+      "windows",
+      "powershell"
+    ]
+  },
+  "tactic": "TA0002",
+  "icon": "\ud83e\ude9f"
+}

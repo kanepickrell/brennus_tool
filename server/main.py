@@ -794,6 +794,82 @@ async def get_module_payload(module_key: str):
         raise HTTPException(status_code=500, detail=f"Failed to read payload: {e}")
 
 
+
+# =============================================================================
+# Campaign Persistence Endpoints
+# =============================================================================
+
+CAMPAIGNS_DIR = Path(__file__).parent / "campaigns"
+CAMPAIGNS_DIR.mkdir(exist_ok=True)
+
+
+class CampaignSaveRequest(BaseModel):
+    name: str
+    workflow: Dict[str, Any]
+
+
+def _campaign_path(name: str) -> Path:
+    """Sanitize campaign name and return its file path."""
+    safe_name = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name).strip()
+    return CAMPAIGNS_DIR / f"{safe_name}.lumen"
+
+
+@app.get("/api/campaigns")
+async def list_campaigns():
+    """List all saved campaigns with metadata."""
+    campaigns = []
+    for f in sorted(CAMPAIGNS_DIR.glob("*.lumen"), key=lambda x: x.stat().st_mtime, reverse=True):
+        try:
+            data = json.loads(f.read_text())
+            meta = data.get("metadata", {})
+            campaigns.append({
+                "name":         meta.get("name", f.stem),
+                "description":  meta.get("description", ""),
+                "author":       meta.get("author", ""),
+                "created":      meta.get("created", ""),
+                "lastModified": meta.get("lastModified", ""),
+                "tags":         meta.get("tags", []),
+                "nodeCount":    len(data.get("nodes", [])),
+                "edgeCount":    len(data.get("edges", [])),
+            })
+        except Exception as e:
+            print(f"Warning: Could not read campaign {f.name}: {e}")
+    return {"campaigns": campaigns, "total": len(campaigns)}
+
+
+@app.post("/api/campaigns")
+async def save_campaign(request: CampaignSaveRequest):
+    """Save or update a campaign by name."""
+    path = _campaign_path(request.name)
+    try:
+        path.write_text(json.dumps(request.workflow, indent=2))
+        return {"status": "saved", "name": request.name, "path": str(path)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save campaign: {e}")
+
+
+@app.get("/api/campaigns/{name}")
+async def load_campaign(name: str):
+    """Load a specific campaign by name."""
+    path = _campaign_path(name)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Campaign not found: {name}")
+    try:
+        return json.loads(path.read_text())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load campaign: {e}")
+
+
+@app.delete("/api/campaigns/{name}")
+async def delete_campaign(name: str):
+    """Delete a campaign by name."""
+    path = _campaign_path(name)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Campaign not found: {name}")
+    path.unlink()
+    return {"status": "deleted", "name": name}
+
+
 # =============================================================================
 # Main
 # =============================================================================

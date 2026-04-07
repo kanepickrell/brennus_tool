@@ -1,0 +1,85 @@
+{
+  "_key": "opsec-pause",
+  "name": "OPSEC Pause",
+  "description": "Randomized dwell pause between actions. Command=60-120s, Stage=45-60min, Shift=8-12hr",
+  "executionType": "utility",
+  "estimatedDuration": 60,
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "done",
+      "label": "Complete",
+      "type": "signal",
+      "description": "Node completed \u2014 chain continues"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "pauseType",
+      "label": "Pause Type",
+      "type": "select",
+      "required": true,
+      "options": [
+        "command",
+        "stage",
+        "shift"
+      ],
+      "default": "command"
+    },
+    {
+      "id": "testMode",
+      "label": "Test Mode (fixed short pause)",
+      "type": "boolean",
+      "required": false,
+      "default": false
+    }
+  ],
+  "requirements": {
+    "c2Server": false,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "BuiltIn",
+      "Collections"
+    ]
+  },
+  "robotFramework": {
+    "libraries": [],
+    "keyword": "Sleep",
+    "preKeywordStatements": [
+      "# OPSEC pause \u2014 randomized dwell time",
+      "${_pause_time}=    Evaluate    __import__('random').randint(60, 120) if '${PAUSE_TYPE}' == 'command' else (__import__('random').randint(2700, 3600) if '${PAUSE_TYPE}' == 'stage' else __import__('random').randint(28800, 43200))",
+      "${_final_pause}=    Set Variable If    ${PAUSE_TEST_MODE}    30    ${_pause_time}",
+      "Log To Console    \\nOPSEC pause (${PAUSE_TYPE}): ${_final_pause}s"
+    ],
+    "keywordArgs": [
+      {
+        "variableName": "_final_pause",
+        "position": 1,
+        "variableRef": true
+      }
+    ],
+    "variables": [
+      {
+        "name": "PAUSE_TYPE",
+        "fromParam": "pauseType",
+        "default": "command",
+        "scope": "suite"
+      },
+      {
+        "name": "PAUSE_TEST_MODE",
+        "fromParam": "testMode",
+        "default": "${False}",
+        "scope": "suite"
+      }
+    ],
+    "preKeywordLog": "=== OPSEC Pause: ${PAUSE_TYPE} ===",
+    "tags": [
+      "opsec",
+      "evasion",
+      "timing"
+    ]
+  },
+  "tactic": "TA0005",
+  "icon": "\u23f1\ufe0f"
+}

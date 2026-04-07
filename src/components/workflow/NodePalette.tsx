@@ -35,6 +35,7 @@ const tacticConfig: Record<string, { label: string; icon: string; color: string 
   'TA0008': { label: 'Lateral Movement',      icon: '🚀', color: 'text-purple-400' },
   'TA0009': { label: 'Collection',            icon: '📦', color: 'text-cyan-400'   },
   'TA0011': { label: 'Command & Control',     icon: '📡', color: 'text-yellow-400' },
+  'TA0043': { label: 'Reconnaissance',        icon: '📡', color: 'text-emerald-400' },
   'control': { label: 'Control Flow',         icon: '⚙️', color: 'text-zinc-400'   },
 };
 
@@ -72,6 +73,7 @@ function buildNodeDefinition(m: any): OpforNodeDefinition {
     'command and control':  'TA0011',
     'command & control':    'TA0011',
     'c2':                   'TA0011',
+    'reconnaissance':       'TA0043',
   };
 
   if (!tactic.startsWith('TA')) {
@@ -480,7 +482,7 @@ function BrowseView({
     const nodeDefinitions: OpforNodeDefinition[] = modules.map(buildNodeDefinition);
 
     const tactics: MitreTactic[] = [
-      'TA0042', 'TA0001', 'TA0002', 'TA0003', 'TA0004', 'TA0005',
+      'TA0042', 'TA0043', 'TA0001', 'TA0002', 'TA0003', 'TA0004', 'TA0005',
       'TA0006', 'TA0007', 'TA0008', 'TA0009', 'TA0011', 'control',
     ];
 

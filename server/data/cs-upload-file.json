@@ -43,13 +43,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Upload File",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -70,11 +70,8 @@
     ],
     "pythonCall": "cobaltstrike.Upload File",
     "documentation": "Upload file via beacon",
-    "tags": [
-      "upload",
-      "file"
-    ]
+    "tags": ["upload", "file"]
   },
   "tactic": "TA0001",
-  "icon": "\ud83d\udeaa"
+  "icon": "🚪"
 }

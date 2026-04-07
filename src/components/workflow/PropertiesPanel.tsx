@@ -819,25 +819,18 @@ export function PropertiesPanel({
             <div className="p-4 space-y-4">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Ops Configuration
+                Campaign Configuration
               </h3>
-              <div className="space-y-4">
+
+              {/* Identity */}
+              <div className="space-y-2">
+                <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Identity</div>
                 <div className="space-y-2">
                   <Label htmlFor="planName" className="text-xs">Campaign Name</Label>
                   <Input
                     id="planName"
                     value={globalSettings.executionPlanName}
                     onChange={e => onSettingsChange({ ...globalSettings, executionPlanName: e.target.value })}
-                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="targetNetwork" className="text-xs">Target Network</Label>
-                  <Input
-                    id="targetNetwork"
-                    placeholder="10.0.0.0/24"
-                    value={globalSettings.targetNetwork}
-                    onChange={e => onSettingsChange({ ...globalSettings, targetNetwork: e.target.value })}
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
                   />
                 </div>
@@ -859,29 +852,45 @@ export function PropertiesPanel({
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
                   />
                 </div>
-                <Separator />
                 <div className="space-y-2">
-                  <Label htmlFor="workdir" className="text-xs">Work Directory</Label>
+                  <Label htmlFor="targetNetwork" className="text-xs">Target Network</Label>
                   <Input
-                    id="workdir"
-                    placeholder="%{HOME}/sandworm/"
-                    value={globalSettings.workdir || ''}
-                    onChange={e => onSettingsChange({ ...globalSettings, workdir: e.target.value })}
+                    id="targetNetwork"
+                    placeholder="10.0.0.0/24"
+                    value={globalSettings.targetNetwork}
+                    onChange={e => onSettingsChange({ ...globalSettings, targetNetwork: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* C2 Teamserver */}
+              <div className="space-y-2">
+                <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">C2 Teamserver</div>
+                <div className="space-y-2">
+                  <Label htmlFor="c2Server" className="text-xs">Teamserver IP</Label>
+                  <Input
+                    id="c2Server"
+                    placeholder="202.84.73.4"
+                    value={globalSettings.c2Server}
+                    onChange={e => onSettingsChange({ ...globalSettings, c2Server: e.target.value })}
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="csUser" className="text-xs">CS Username</Label>
+                  <Label htmlFor="csUser" className="text-xs">Username</Label>
                   <Input
                     id="csUser"
-                    placeholder="operator"
+                    placeholder="bah"
                     value={globalSettings.csUser || ''}
                     onChange={e => onSettingsChange({ ...globalSettings, csUser: e.target.value })}
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="csPass" className="text-xs">CS Password</Label>
+                  <Label htmlFor="csPass" className="text-xs">Password</Label>
                   <Input
                     id="csPass"
                     type="password"
@@ -889,6 +898,16 @@ export function PropertiesPanel({
                     value={globalSettings.csPass || ''}
                     onChange={e => onSettingsChange({ ...globalSettings, csPass: e.target.value })}
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="csPort" className="text-xs">Port</Label>
+                  <Input
+                    id="csPort"
+                    placeholder="50050"
+                    value={globalSettings.csPort || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, csPort: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
                   />
                 </div>
                 <div className="space-y-2">
@@ -901,64 +920,26 @@ export function PropertiesPanel({
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
                   />
                 </div>
+              </div>
+
+              <Separator />
+
+              {/* Operator Environment */}
+              <div className="space-y-2">
+                <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Operator Environment</div>
                 <div className="space-y-2">
-                  <Label htmlFor="csPort" className="text-xs">CS Port</Label>
+                  <Label htmlFor="workdir" className="text-xs">Work Directory</Label>
                   <Input
-                    id="csPort"
-                    placeholder="50050"
-                    value={globalSettings.csPort || ''}
-                    onChange={e => onSettingsChange({ ...globalSettings, csPort: e.target.value })}
+                    id="workdir"
+                    placeholder="%{HOME}/sandworm/"
+                    value={globalSettings.workdir || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, workdir: e.target.value })}
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
                   />
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <Label className="text-xs text-amber-400 flex items-center gap-1">
-                    <Terminal className="h-3 w-3" /> Hunt Variables
-                  </Label>
+                  <p className="text-[10px] text-zinc-600 italic">Use %{'{HOME}'} — Robot Framework env var syntax</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="artifactDir" className="text-xs">Artifact Dir</Label>
-                  <Input
-                    id="artifactDir"
-                    placeholder="artifact"
-                    value={globalSettings.artifactDir || ''}
-                    onChange={e => onSettingsChange({ ...globalSettings, artifactDir: e.target.value })}
-                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="localInitialBeacon" className="text-xs">Local Initial Beacon</Label>
-                  <Input
-                    id="localInitialBeacon"
-                    placeholder="${WORKDIR}update.exe"
-                    value={globalSettings.localInitialBeacon || ''}
-                    onChange={e => onSettingsChange({ ...globalSettings, localInitialBeacon: e.target.value })}
-                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="target1" className="text-xs">Target 1 (TARGET1)</Label>
-                  <Input
-                    id="target1"
-                    placeholder="172.16.2.5"
-                    value={globalSettings.target1 || ''}
-                    onChange={e => onSettingsChange({ ...globalSettings, target1: e.target.value })}
-                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="target2" className="text-xs">Target 2 (TARGET2)</Label>
-                  <Input
-                    id="target2"
-                    placeholder="172.16.2.3"
-                    value={globalSettings.target2 || ''}
-                    onChange={e => onSettingsChange({ ...globalSettings, target2: e.target.value })}
-                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sudoNeeded" className="text-xs">Sudo Needed</Label>
+                  <Label htmlFor="sudoNeeded" className="text-xs">Sudo Required</Label>
                   <Select
                     value={globalSettings.sudoNeeded || '${False}'}
                     onValueChange={v => onSettingsChange({ ...globalSettings, sudoNeeded: v })}
@@ -987,25 +968,58 @@ export function PropertiesPanel({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full border-sidebar-border text-xs"
-                  onClick={() => {
-                    onSettingsChange({
-                      executionPlanName: 'Neon Saguaro',
-                      targetNetwork: '',
-                      c2Server: '',
-                      sessionId: 'session_01',
-                      operator: '',
-                      redTeam: '',
-                      notes: '',
-                    });
-                  }}
-                >
-                  Reset to Defaults
-                </Button>
               </div>
+
+              <Separator />
+
+              {/* Auto-generated — read-only info panel */}
+              <div className="p-3 rounded-md bg-zinc-900/50 border border-zinc-800 space-y-2">
+                <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Auto-generated</div>
+                <div className="space-y-1.5 text-[10px] font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">ARTIFACT_DIR</span>
+                    <span className="text-zinc-400">
+                      {'artifact/'}
+                      {(globalSettings.executionPlanName || 'campaign')
+                        .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">LOCAL_INITIAL_BEACON</span>
+                    <span className="text-zinc-400">{'${WORKDIR}'}update.exe</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-600">TARGET1, TARGET2…</span>
+                    <span className="text-zinc-600 italic">from node params</span>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-sidebar-border text-xs"
+                onClick={() => {
+                  onSettingsChange({
+                    executionPlanName: 'Hunt 1',
+                    targetNetwork: '',
+                    c2Server: '202.84.73.4',
+                    sessionId: 'session_01',
+                    operator: '',
+                    redTeam: '',
+                    notes: '',
+                    csUser: 'bah',
+                    csPass: '',
+                    csDir: '/opt/cobaltstrike',
+                    csPort: '50050',
+                    workdir: '%{HOME}/sandworm/',
+                    debugMode: '${False}',
+                    sudoNeeded: '${False}',
+                  });
+                }}
+              >
+                Reset to Defaults
+              </Button>
             </div>
           </ScrollArea>
         );

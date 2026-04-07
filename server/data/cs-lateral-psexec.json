@@ -53,14 +53,11 @@
     ],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Lateral Move (PSExec)",
-    "resources": [
-      "hunt_1.resource"
-    ],
     "keywordArgs": [
       {
         "param": "session",
@@ -70,7 +67,8 @@
       {
         "param": "targetIp",
         "position": 2,
-        "variableRef": false
+        "variableRef": true,
+        "variableName": "TARGET2"
       },
       {
         "param": "listener",
@@ -85,6 +83,17 @@
     "tags": [
       "lateral-movement",
       "psexec"
+    ],
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
+    ],
+    "variables": [
+      {
+        "name": "TARGET2",
+        "fromParam": "targetIp",
+        "scope": "suite",
+        "default": "172.16.2.3"
+      }
     ]
   },
   "tactic": "TA0008",

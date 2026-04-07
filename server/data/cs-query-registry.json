@@ -43,13 +43,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Query Registry",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -65,11 +65,8 @@
     ],
     "pythonCall": "Issue Shell Cmd",
     "documentation": "Query registry key",
-    "tags": [
-      "discovery",
-      "registry"
-    ]
+    "tags": ["discovery", "registry"]
   },
   "tactic": "TA0007",
-  "icon": "\ud83d\udd0d"
+  "icon": "🔍"
 }

@@ -44,13 +44,13 @@
     "payloads": [],
     "elevated": true,
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Stop Service",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -65,12 +65,10 @@
       }
     ],
     "pythonCall": "Issue Shell Cmd",
+    "preKeywordLog": "=== Stopping Service: ${serviceName} ===",
     "documentation": "Stop Windows service",
-    "tags": [
-      "impact",
-      "service"
-    ]
+    "tags": ["impact", "service"]
   },
   "tactic": "TA0040",
-  "icon": "\ud83d\udca5"
+  "icon": "💥"
 }

@@ -1,9 +1,11 @@
 {
   "_key": "cs-network-enumerate",
   "name": "Network Enumerate",
-  "description": "Run Cobalt Strike port scan (bportscan) against target IP range to discover open services",
+  "tactic": "TA0007",
+  "icon": "🔍",
+  "description": "Run portscan on target subnet via beacon",
   "executionType": "cobalt_strike",
-  "estimatedDuration": 60,
+  "estimatedDuration": 30,
   "inputs": [
     {
       "id": "session",
@@ -17,7 +19,7 @@
       "id": "scan_results",
       "label": "Scan Results",
       "type": "string",
-      "description": "Open ports and services"
+      "description": "Port scan output"
     }
   ],
   "parameters": [
@@ -30,32 +32,31 @@
       "default": "${CURRENT_SESSION}"
     },
     {
-      "id": "ipRange",
-      "label": "IP Range",
+      "id": "targetRange",
+      "label": "Target Range",
       "type": "string",
       "required": true,
-      "placeholder": "10.0.0.0/24",
-      "default": "10.0.0.0/24"
+      "placeholder": "172.16.2.0/24",
+      "default": "172.16.2.0/24"
     },
     {
       "id": "ports",
       "label": "Ports",
       "type": "string",
       "required": true,
-      "placeholder": "22,80,443,445,3389",
-      "default": "22,80,443,445,3389"
+      "placeholder": "445,5985,135",
+      "default": "445,5985,135"
     },
     {
-      "id": "discovery",
-      "label": "Discovery Mode",
+      "id": "method",
+      "label": "Method",
       "type": "select",
       "required": true,
       "options": [
-        "arp",
         "icmp",
-        "none"
+        "arp"
       ],
-      "default": "arp"
+      "default": "icmp"
     }
   ],
   "requirements": {
@@ -63,13 +64,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Network Enumerate",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -78,7 +79,7 @@
         "sessionVariable": "CURRENT_SESSION"
       },
       {
-        "param": "ipRange",
+        "param": "targetRange",
         "position": 2,
         "variableRef": false
       },
@@ -88,18 +89,30 @@
         "variableRef": false
       },
       {
-        "param": "discovery",
+        "param": "method",
         "position": 4,
-        "variableRef": false
+        "variableRef": true,
+        "variableName": "SCAN_METHOD"
       }
     ],
-    "pythonCall": "Run Bportscan",
-    "documentation": "Port scan target network range",
+    "variables": [
+      {
+        "name": "SCAN_METHOD",
+        "fromParam": "method",
+        "default": "icmp",
+        "scope": "suite"
+      },
+      {
+        "name": "ARCH",
+        "default": "x64",
+        "scope": "suite"
+      }
+    ],
+    "preKeywordLog": "=== Network Enumerate: ${targetRange} ===",
+    "documentation": "Portscan target range via beacon",
     "tags": [
       "discovery",
-      "network"
+      "portscan"
     ]
-  },
-  "tactic": "TA0007",
-  "icon": "\ud83d\udd0d"
+  }
 }

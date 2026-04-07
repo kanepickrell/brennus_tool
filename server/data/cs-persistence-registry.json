@@ -1,7 +1,9 @@
 {
   "_key": "cs-persistence-registry",
   "name": "Persistence via Registry",
-  "description": "Establish persistence by adding beacon path to HKCU Run registry key via reg add command",
+  "tactic": "TA0003",
+  "icon": "🔒",
+  "description": "Establish persistence via registry run key",
   "executionType": "cobalt_strike",
   "estimatedDuration": 10,
   "inputs": [
@@ -14,10 +16,10 @@
   ],
   "outputs": [
     {
-      "id": "persistence_set",
-      "label": "Persistence Set",
+      "id": "persisted",
+      "label": "Persisted",
       "type": "boolean",
-      "description": "Registry key written"
+      "description": "Persistence established"
     }
   ],
   "parameters": [
@@ -30,31 +32,12 @@
       "default": "${CURRENT_SESSION}"
     },
     {
-      "id": "regKeyName",
-      "label": "Key Name",
-      "type": "string",
-      "required": true,
-      "placeholder": "WindowsUpdate",
-      "default": "WindowsUpdate"
-    },
-    {
-      "id": "payloadPath",
-      "label": "Payload Path",
+      "id": "beaconPath",
+      "label": "Beacon Path",
       "type": "string",
       "required": true,
       "placeholder": "C:\\Users\\Public\\update.exe",
       "default": "C:\\Users\\Public\\update.exe"
-    },
-    {
-      "id": "regHive",
-      "label": "Registry Hive",
-      "type": "select",
-      "required": false,
-      "options": [
-        "HKCU",
-        "HKLM"
-      ],
-      "default": "HKCU"
     }
   ],
   "requirements": {
@@ -62,13 +45,13 @@
     "listeners": [],
     "payloads": [],
     "libraries": [
-      "hunt_1.resource"
+      "cobaltstrikec2/cobaltstrike.py"
     ]
   },
   "robotFramework": {
     "keyword": "Persistence (Registry)",
-    "resources": [
-      "hunt_1.resource"
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
     ],
     "keywordArgs": [
       {
@@ -77,37 +60,29 @@
         "sessionVariable": "CURRENT_SESSION"
       },
       {
-        "param": "regKeyName",
+        "param": "beaconPath",
         "position": 2,
-        "variableRef": false
-      },
-      {
-        "param": "payloadPath",
-        "position": 3,
-        "variableRef": false
-      },
-      {
-        "param": "regHive",
-        "position": 4,
         "variableRef": false
       }
     ],
     "variables": [
       {
-        "name": "PERSISTENCE_KEY",
-        "fromParam": "regKeyName",
-        "scope": "local"
+        "name": "APPDATA_PATH",
+        "default": "AppData\\\\Local\\\\Temp",
+        "scope": "suite"
+      },
+      {
+        "name": "RUN_KEY",
+        "default": "HKEY_CURRENT_USER\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run",
+        "scope": "suite"
       }
     ],
-    "pythonCall": "Issue Shell Cmd",
-    "preKeywordLog": "=== Setting Registry Persistence: ${PERSISTENCE_KEY} ===",
+    "preKeywordLog": "=== Setting Registry Persistence: ${RUN_KEY} ===",
     "postKeywordLog": "=== Registry Persistence Set ===",
-    "documentation": "Registry Run key persistence",
+    "documentation": "Persist beacon via registry run key",
     "tags": [
       "persistence",
       "registry"
     ]
-  },
-  "tactic": "TA0003",
-  "icon": "\ud83d\udd12"
+  }
 }
