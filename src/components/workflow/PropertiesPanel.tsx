@@ -911,6 +911,82 @@ export function PropertiesPanel({
                     className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
                   />
                 </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-xs text-amber-400 flex items-center gap-1">
+                    <Terminal className="h-3 w-3" /> Hunt Variables
+                  </Label>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="artifactDir" className="text-xs">Artifact Dir</Label>
+                  <Input
+                    id="artifactDir"
+                    placeholder="artifact"
+                    value={globalSettings.artifactDir || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, artifactDir: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="localInitialBeacon" className="text-xs">Local Initial Beacon</Label>
+                  <Input
+                    id="localInitialBeacon"
+                    placeholder="${WORKDIR}update.exe"
+                    value={globalSettings.localInitialBeacon || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, localInitialBeacon: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="target1" className="text-xs">Target 1 (TARGET1)</Label>
+                  <Input
+                    id="target1"
+                    placeholder="172.16.2.5"
+                    value={globalSettings.target1 || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, target1: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="target2" className="text-xs">Target 2 (TARGET2)</Label>
+                  <Input
+                    id="target2"
+                    placeholder="172.16.2.3"
+                    value={globalSettings.target2 || ''}
+                    onChange={e => onSettingsChange({ ...globalSettings, target2: e.target.value })}
+                    className="bg-sidebar-accent border-sidebar-border h-8 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sudoNeeded" className="text-xs">Sudo Needed</Label>
+                  <Select
+                    value={globalSettings.sudoNeeded || '${False}'}
+                    onValueChange={v => onSettingsChange({ ...globalSettings, sudoNeeded: v })}
+                  >
+                    <SelectTrigger className="bg-sidebar-accent border-sidebar-border h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="${False}" className="text-xs">{"${False}"}</SelectItem>
+                      <SelectItem value="${True}" className="text-xs">{"${True}"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="debugMode" className="text-xs">Debug Mode</Label>
+                  <Select
+                    value={globalSettings.debugMode || '${False}'}
+                    onValueChange={v => onSettingsChange({ ...globalSettings, debugMode: v })}
+                  >
+                    <SelectTrigger className="bg-sidebar-accent border-sidebar-border h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="${False}" className="text-xs">{"${False}"}</SelectItem>
+                      <SelectItem value="${True}" className="text-xs">{"${True}"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button 
                   variant="outline" 
                   size="sm" 

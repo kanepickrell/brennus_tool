@@ -64,6 +64,7 @@ import {
 } from '@/services/executionService';
 import { generateRobotScript } from '@/services/robotScriptGenerator';
 import { GuidedVariation } from '@/data/guidedVariations';
+import { libraryModuleService } from '@/services/libraryModuleService';
 
 // Node types registered once outside the component to avoid re-render churn
 const nodeTypes = {
@@ -104,6 +105,12 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     csPass: '',
     csDir: '/opt/cobaltstrike',
     csPort: '50050',
+    localInitialBeacon: '${WORKDIR}update.exe',
+    target1: '172.16.2.5',
+    target2: '172.16.2.3',
+    artifactDir: 'artifact',
+    debugMode: '${False}',
+    sudoNeeded: '${False}',
   });
 
   // ── Seed globalSettings from campaign config on mount ──────────────────────
@@ -959,8 +966,10 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
+  // onDrop is async — fetches full payload JSON before placing the node
+  // so the robotFramework config is available to the script generator immediately.
   const onDrop = useCallback(
-    (event: React.DragEvent) => {
+    async (event: React.DragEvent) => {
       event.preventDefault();
       const nodeDataString = event.dataTransfer.getData('application/json');
       if (!nodeDataString) return;
@@ -970,6 +979,18 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         nodeDef = JSON.parse(nodeDataString);
       } catch {
         return;
+      }
+
+      // Fetch full payload to get robotFramework config before placing node
+      const moduleKey = nodeDef._key || nodeDef.id;
+      try {
+        const payload = await libraryModuleService.getModulePayload(moduleKey);
+        if (payload) {
+          // Merge payload into nodeDef — payload wins on conflicts, keys preserved
+          nodeDef = { ...nodeDef, ...payload, _key: nodeDef._key, id: nodeDef.id };
+        }
+      } catch (e) {
+        console.warn(`Could not fetch payload for ${moduleKey} — using metadata only`, e);
       }
 
       const safeNodeDef = ensureSafeNodeDef(nodeDef);

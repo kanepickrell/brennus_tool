@@ -1,0 +1,126 @@
+{
+  "_key": "brute-sim",
+  "name": "Brute Force Sim",
+  "tactic": "TA0006",
+  "icon": "\ud83d\udd11",
+  "description": "Simulate credential brute force against domain accounts with configurable attempt count and delay",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 30,
+  "inputs": [
+    {
+      "id": "c2_ready",
+      "label": "C2 Ready",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "creds_found",
+      "label": "Credentials Found",
+      "type": "boolean",
+      "description": "Whether valid credentials were found"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "domain",
+      "label": "Domain",
+      "type": "string",
+      "required": true,
+      "placeholder": "a51",
+      "default": "a51"
+    },
+    {
+      "id": "username",
+      "label": "Username",
+      "type": "string",
+      "required": true,
+      "placeholder": "Administrator",
+      "default": "Administrator"
+    },
+    {
+      "id": "password",
+      "label": "Password",
+      "type": "string",
+      "required": true,
+      "placeholder": "P@ssw0rd",
+      "default": "P@ssw0rd"
+    },
+    {
+      "id": "attempts",
+      "label": "Attempts",
+      "type": "number",
+      "required": false,
+      "placeholder": "100",
+      "default": 100
+    },
+    {
+      "id": "delay",
+      "label": "Delay (s)",
+      "type": "number",
+      "required": false,
+      "placeholder": "0.5",
+      "default": 0.5
+    },
+    {
+      "id": "listener",
+      "label": "Listener",
+      "type": "string",
+      "required": false,
+      "placeholder": "HTTP",
+      "default": "HTTP"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Brute Sim",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "domain",
+        "position": 1,
+        "variableRef": false
+      },
+      {
+        "param": "username",
+        "position": 2,
+        "variableRef": false
+      },
+      {
+        "param": "password",
+        "position": 3,
+        "variableRef": false
+      },
+      {
+        "param": "attempts",
+        "position": 4,
+        "variableRef": false
+      },
+      {
+        "param": "delay",
+        "position": 5,
+        "variableRef": false
+      },
+      {
+        "param": "listener",
+        "position": 6,
+        "variableRef": false
+      }
+    ],
+    "documentation": "Brute force credential simulation",
+    "tags": [
+      "credential-access",
+      "brute-force"
+    ]
+  }
+}

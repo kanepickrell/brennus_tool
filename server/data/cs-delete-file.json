@@ -1,0 +1,67 @@
+{
+  "_key": "cs-delete-file",
+  "name": "Delete File",
+  "tactic": "TA0005",
+  "icon": "\ud83d\udee1\ufe0f",
+  "description": "Delete a file on target using del /f command through beacon to remove artifacts",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 5,
+  "inputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "required": true
+    }
+  ],
+  "outputs": [],
+  "parameters": [
+    {
+      "id": "session",
+      "label": "Session",
+      "type": "string",
+      "required": true,
+      "placeholder": "${CURRENT_SESSION}",
+      "default": "${CURRENT_SESSION}"
+    },
+    {
+      "id": "filePath",
+      "label": "File Path",
+      "type": "string",
+      "required": true,
+      "placeholder": "C:\\Windows\\Temp\\artifact.zip",
+      "default": "C:\\Windows\\Temp\\artifact.zip"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Delete File",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "session",
+        "position": 1,
+        "sessionVariable": "CURRENT_SESSION"
+      },
+      {
+        "param": "filePath",
+        "position": 2,
+        "variableRef": false
+      }
+    ],
+    "documentation": "Delete file to remove artifacts",
+    "tags": [
+      "defense-evasion",
+      "cleanup"
+    ]
+  }
+}

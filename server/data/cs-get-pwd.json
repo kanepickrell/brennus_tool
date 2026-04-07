@@ -1,0 +1,62 @@
+{
+  "_key": "cs-get-pwd",
+  "name": "Get Working Directory",
+  "tactic": "TA0007",
+  "icon": "\ud83d\udd0d",
+  "description": "Get the current working directory on target via beacon using echo %CD%",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 5,
+  "inputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "pwd_result",
+      "label": "Working Directory",
+      "type": "string",
+      "description": "Current working directory path"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "session",
+      "label": "Session",
+      "type": "string",
+      "required": true,
+      "placeholder": "${CURRENT_SESSION}",
+      "default": "${CURRENT_SESSION}"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Get Pwd",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "session",
+        "position": 1,
+        "sessionVariable": "CURRENT_SESSION"
+      }
+    ],
+    "captureOutput": "PWD_RESULT",
+    "documentation": "Get current working directory",
+    "tags": [
+      "discovery",
+      "filesystem"
+    ]
+  }
+}

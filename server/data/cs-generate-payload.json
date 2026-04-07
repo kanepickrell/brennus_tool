@@ -1,0 +1,131 @@
+{
+  "_key": "cs-generate-payload",
+  "name": "Generate Payload",
+  "tactic": "TA0042",
+  "icon": "\ud83c\udfd7\ufe0f",
+  "description": "Generate a Cobalt Strike beacon payload using Create Payload with specified listener and template",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 30,
+  "inputs": [
+    {
+      "id": "listener_active",
+      "label": "Listener Active",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "payload_ready",
+      "label": "Payload Ready",
+      "type": "boolean",
+      "description": "Payload file generated and ready"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "payloadName",
+      "label": "Payload Name",
+      "type": "string",
+      "required": true,
+      "placeholder": "update",
+      "default": "update"
+    },
+    {
+      "id": "payloadTemplate",
+      "label": "Template",
+      "type": "select",
+      "required": true,
+      "options": [
+        "exe",
+        "dll",
+        "powershell",
+        "raw"
+      ],
+      "default": "exe"
+    },
+    {
+      "id": "listenerName",
+      "label": "Listener",
+      "type": "string",
+      "required": true,
+      "placeholder": "HTTP",
+      "default": "HTTP"
+    },
+    {
+      "id": "outputDir",
+      "label": "Output Dir",
+      "type": "string",
+      "required": true,
+      "placeholder": "${WORKDIR}",
+      "default": "${WORKDIR}"
+    },
+    {
+      "id": "retries",
+      "label": "Retries",
+      "type": "number",
+      "required": false,
+      "placeholder": "5",
+      "default": 5
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [
+      "HTTP"
+    ],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Generate Payload",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "payloadName",
+        "position": 1,
+        "variableRef": true,
+        "variableName": "HTTP_PAYLOAD_NAME"
+      },
+      {
+        "param": "payloadTemplate",
+        "position": 2,
+        "variableRef": false
+      },
+      {
+        "param": "listenerName",
+        "position": 3,
+        "variableRef": true,
+        "variableName": "HTTP_LISTENER"
+      },
+      {
+        "param": "outputDir",
+        "position": 4,
+        "variableRef": false
+      },
+      {
+        "param": "retries",
+        "position": 5,
+        "variableRef": false
+      }
+    ],
+    "variables": [
+      {
+        "name": "HTTP_PAYLOAD_NAME",
+        "fromParam": "payloadName",
+        "scope": "suite"
+      }
+    ],
+    "captureOutput": "PAYLOAD_PATH",
+    "postKeywordLog": "=== Payload Location: ${PAYLOAD_PATH} ===",
+    "documentation": "Generate beacon payload",
+    "tags": [
+      "resource-development",
+      "payload"
+    ]
+  }
+}

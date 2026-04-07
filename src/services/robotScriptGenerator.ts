@@ -387,6 +387,23 @@ function generateSettings(
     if (robotConfig.isSuiteTeardown) suiteTeardownNode = node;
   });
 
+  // When hunt_1.resource is imported, inject all libraries it depends on.
+  // hunt_1.resource itself doesn't declare these — the calling .robot file must.
+  if (resources.has('hunt_1.resource')) {
+    [
+      'cobaltstrikec2/cobaltstrike.py',
+      'LogLibrary.py',
+      'Process',
+      'OperatingSystem',
+      'Collections',
+      'DateTime',
+      'SSHLibrary',
+      'String',
+      'SCPLibrary',
+      'CSVLibrary',
+    ].forEach(lib => libraries.add(lib));
+  }
+
   const lines: string[] = [
     '*** Settings ***',
     `Documentation       ${globalSettings.executionPlanName || 'Generated Workflow'}`,
@@ -458,9 +475,13 @@ function generateVariables(
   if (globalSettings.csPort)     c2Vars.push({ name: 'CS_PORT',      value: globalSettings.csPort });
 
   // Always emit these so Setup C2 never hits an undefined variable
-  c2Vars.push({ name: 'ARTIFACT_DIR', value: globalSettings.artifactDir ?? 'artifact' });
-  c2Vars.push({ name: 'DEBUG_MODE',   value: globalSettings.debugMode   ?? '${False}' });
-  c2Vars.push({ name: 'SUDO_NEEDED',  value: globalSettings.sudoNeeded  ?? '${False}' });
+  c2Vars.push({ name: 'ARTIFACT_DIR',        value: globalSettings.artifactDir        ?? 'artifact' });
+  c2Vars.push({ name: 'DEBUG_MODE',          value: globalSettings.debugMode          ?? '${False}' });
+  c2Vars.push({ name: 'SUDO_NEEDED',         value: globalSettings.sudoNeeded         ?? '${False}' });
+  c2Vars.push({ name: 'LOCAL_INITIAL_BEACON',value: globalSettings.localInitialBeacon ?? '${WORKDIR}update.exe' });
+  if (globalSettings.target2) {
+    c2Vars.push({ name: 'TARGET2', value: globalSettings.target2 });
+  }
 
   if (c2Vars.length > 0) {
     lines.push('# C2 Server Configuration');

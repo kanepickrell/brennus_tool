@@ -1,0 +1,74 @@
+{
+  "_key": "cs-download-file",
+  "name": "Download File",
+  "tactic": "TA0009",
+  "icon": "\ud83d\udce6",
+  "description": "Download a file from target to operator machine via C2 beacon channel",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 30,
+  "inputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "file_downloaded",
+      "label": "File Downloaded",
+      "type": "boolean",
+      "description": "File retrieved to operator"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "session",
+      "label": "Session",
+      "type": "string",
+      "required": true,
+      "placeholder": "${CURRENT_SESSION}",
+      "default": "${CURRENT_SESSION}"
+    },
+    {
+      "id": "remoteFile",
+      "label": "Remote File Path",
+      "type": "string",
+      "required": true,
+      "placeholder": "C:\\Windows\\Temp\\staged.zip",
+      "default": "C:\\Windows\\Temp\\staged.zip"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Download File",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "session",
+        "position": 1,
+        "sessionVariable": "CURRENT_SESSION"
+      },
+      {
+        "param": "remoteFile",
+        "position": 2,
+        "variableRef": false
+      }
+    ],
+    "documentation": "Download file via beacon",
+    "tags": [
+      "collection",
+      "exfil"
+    ]
+  }
+}

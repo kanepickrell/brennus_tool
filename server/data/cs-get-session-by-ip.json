@@ -1,0 +1,69 @@
+{
+  "_key": "cs-get-session-by-ip",
+  "name": "Get Session By IP",
+  "tactic": "TA0011",
+  "icon": "\ud83d\udce1",
+  "description": "Retrieve active beacon sessions filtered by target IP address",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 5,
+  "inputs": [
+    {
+      "id": "c2_ready",
+      "label": "C2 Ready",
+      "type": "boolean",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "description": "Active session on target IP"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "targetIp",
+      "label": "Target IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "172.16.2.5",
+      "default": "172.16.2.5"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Get New Session By IP",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "variableName": "ACTIVE_SESSIONS",
+        "position": 1,
+        "variableRef": true
+      },
+      {
+        "param": "targetIp",
+        "position": 2,
+        "variableRef": false
+      }
+    ],
+    "captureOutput": "CURRENT_SESSION",
+    "sessionVariable": "CURRENT_SESSION",
+    "postKeywordLog": "=== Got Session: ${CURRENT_SESSION} ===",
+    "documentation": "Get active session by IP",
+    "tags": [
+      "c2",
+      "session"
+    ]
+  }
+}

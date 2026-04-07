@@ -92,6 +92,10 @@ async def lifespan(app: FastAPI):
     print(f"   C2 Library: {'Available' if C2_AVAILABLE else 'Not Found'}")
     print(f"   Robot Framework: {check_robot_installed()}")
     print(f"   Ollama: {OLLAMA_HOST} ({OLLAMA_MODEL})")
+    print(f"   Local module data: {DATA_DIR} ({'exists' if DATA_DIR.exists() else 'NOT FOUND'})")
+    if DATA_DIR.exists():
+        count = len(list(DATA_DIR.glob("*.json")))
+        print(f"   Module JSON files: {count}")
 
     # Check Ollama connectivity
     try:
@@ -722,6 +726,72 @@ async def test_robot_execution():
         return {"success": False, "error": "Timed out"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+# =============================================================================
+# Local Module Data Endpoints
+# =============================================================================
+
+DATA_DIR = Path(__file__).parent / "data"
+
+
+@app.get("/api/library-modules")
+async def get_library_modules(search: Optional[str] = None, limit: int = 500):
+    """Serve module metadata list from local JSON files in server/data/"""
+    modules = []
+
+    if not DATA_DIR.exists():
+        return {"modules": [], "total": 0}
+
+    for json_file in sorted(DATA_DIR.glob("*.json")):
+        try:
+            data = json.loads(json_file.read_text())
+            module = {
+                "_key":              data.get("_key", json_file.stem),
+                "id":                data.get("_key", json_file.stem),
+                "name":              data.get("name", json_file.stem),
+                "icon":              data.get("icon", "⚡"),
+                "tactic":            data.get("tactic", "control"),
+                "category":          data.get("category", "Cobalt Strike"),
+                "subcategory":       data.get("subcategory", ""),
+                "description":       data.get("description", ""),
+                "riskLevel":         data.get("riskLevel", "medium"),
+                "estimatedDuration": data.get("estimatedDuration", 30),
+                "executionType":     data.get("executionType", "cobalt_strike"),
+                "tags":              data.get("tags", []),
+                "payload_url":       f"/api/ingest/payloads/{json_file.stem}.json",
+            }
+
+            if search:
+                search_lower = search.lower()
+                if not any(
+                    search_lower in str(v).lower()
+                    for v in [module["name"], module["description"],
+                              module["tactic"], module["category"]]
+                ):
+                    continue
+
+            modules.append(module)
+        except Exception as e:
+            print(f"Warning: Could not load {json_file.name}: {e}")
+            continue
+
+    return {"modules": modules[:limit], "total": len(modules)}
+
+
+@app.get("/api/ingest/payloads/{module_key}.json")
+async def get_module_payload(module_key: str):
+    """Serve full payload JSON for a module from server/data/"""
+    payload_path = DATA_DIR / f"{module_key}.json"
+
+    if not payload_path.exists():
+        raise HTTPException(status_code=404, detail=f"Payload not found: {module_key}")
+
+    try:
+        data = json.loads(payload_path.read_text())
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read payload: {e}")
 
 
 # =============================================================================

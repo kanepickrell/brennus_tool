@@ -1,0 +1,117 @@
+{
+  "_key": "cs-elevate-spawnas",
+  "name": "Elevate With Spawnas",
+  "tactic": "TA0004",
+  "icon": "\ud83d\udc51",
+  "description": "Elevate beacon context using spawnas with known credentials to obtain privileged session",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 15,
+  "inputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "elevated_session",
+      "label": "Elevated Session",
+      "type": "session",
+      "description": "New privileged beacon session"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "session",
+      "label": "Session",
+      "type": "string",
+      "required": true,
+      "placeholder": "${CURRENT_SESSION}",
+      "default": "${CURRENT_SESSION}"
+    },
+    {
+      "id": "domain",
+      "label": "Domain",
+      "type": "string",
+      "required": true,
+      "placeholder": "a51",
+      "default": "a51"
+    },
+    {
+      "id": "username",
+      "label": "Username",
+      "type": "string",
+      "required": true,
+      "placeholder": "Administrator",
+      "default": "Administrator"
+    },
+    {
+      "id": "password",
+      "label": "Password",
+      "type": "string",
+      "required": true,
+      "placeholder": "P@ssw0rd",
+      "default": "P@ssw0rd"
+    },
+    {
+      "id": "listener",
+      "label": "Listener",
+      "type": "string",
+      "required": true,
+      "placeholder": "${HTTP_LISTENER}",
+      "default": "${HTTP_LISTENER}"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [
+      "HTTP"
+    ],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Elevate With Spawnas",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "session",
+        "position": 1,
+        "sessionVariable": "CURRENT_SESSION"
+      },
+      {
+        "param": "domain",
+        "position": 2,
+        "variableRef": false
+      },
+      {
+        "param": "username",
+        "position": 3,
+        "variableRef": false
+      },
+      {
+        "param": "password",
+        "position": 4,
+        "variableRef": false
+      },
+      {
+        "param": "listener",
+        "position": 5,
+        "variableRef": true,
+        "variableName": "HTTP_LISTENER"
+      }
+    ],
+    "preKeywordLog": "=== Elevating with Spawnas ===",
+    "documentation": "Elevate beacon using spawnas",
+    "tags": [
+      "privilege-escalation",
+      "spawnas"
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "_key": "cs-get-arp",
+  "name": "Get ARP Table",
+  "tactic": "TA0007",
+  "icon": "\ud83d\udd0d",
+  "description": "Retrieve ARP table from target via beacon using arp -a to map adjacent hosts",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 5,
+  "inputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "arp_data",
+      "label": "ARP Data",
+      "type": "string",
+      "description": "ARP table contents"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "session",
+      "label": "Session",
+      "type": "string",
+      "required": true,
+      "placeholder": "${CURRENT_SESSION}",
+      "default": "${CURRENT_SESSION}"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Get Arp Data",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "session",
+        "position": 1,
+        "sessionVariable": "CURRENT_SESSION"
+      }
+    ],
+    "captureOutput": "ARP_RESULT",
+    "documentation": "Get ARP table",
+    "tags": [
+      "discovery",
+      "network"
+    ]
+  }
+}

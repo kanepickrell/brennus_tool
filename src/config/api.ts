@@ -2,7 +2,8 @@
 // Generated: 2026-01-16T18:45:31.431135Z
 // DO NOT EDIT - Regenerate from ProtoGraph UI
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
@@ -11,14 +12,14 @@ export const API_CONFIG = {
     OPERATOR_MODULES: '/api/library-modules',
     // OPERATOR_MODULE_DETAIL: (key: string) => `/api/plugins/operator/modules/${key}`,
     OPERATOR_MODULE_DETAIL: (key: string) => `/api/library-modules/${key}`,
+    // MODULE_DETAIL: (key: string) => `/api/library-modules/${key}`,
+    MODULE_DETAIL: (key: string) => `/api/ingest/payloads/${key}.json`,
     OPERATOR_CATEGORIES: '/api/plugins/operator/categories',
     OPERATOR_TACTICS: '/api/plugins/operator/tactics',
     OPERATOR_STATS: '/api/plugins/operator/stats',
     OPERATOR_VALIDATE: '/api/plugins/operator/validate',
   }
 };
-
-
 
 // Type declaration for Vite env variables
 declare global {
@@ -27,13 +28,11 @@ declare global {
   }
 }
 
-
 //////////////////////////////////////
 ////// ORIGINAL - DO NOT DELETE ///////
 //////////////////////////////////////
 
 // const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 // export const API_CONFIG = {
 //   BASE_URL: API_BASE_URL,
 //   ENDPOINTS: {
@@ -50,11 +49,9 @@ declare global {
 //     GENERATE_MODULE: '/api/library-modules/generate',
 //   }
 // };
-
 // // Type declaration for Vite env variables
 // declare global {
 //   interface ImportMetaEnv {
 //     VITE_API_URL?: string;
 //   }
 // }
-

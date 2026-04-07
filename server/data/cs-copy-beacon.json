@@ -1,0 +1,87 @@
+{
+  "_key": "cs-copy-beacon",
+  "name": "Copy Beacon",
+  "tactic": "TA0005",
+  "icon": "\ud83d\udee1\ufe0f",
+  "description": "Copy beacon executable to a new location using copy command to establish secondary presence",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 5,
+  "inputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "required": true
+    }
+  ],
+  "outputs": [
+    {
+      "id": "session",
+      "label": "Beacon Session",
+      "type": "session",
+      "description": "Session after copy"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "session",
+      "label": "Session",
+      "type": "string",
+      "required": true,
+      "placeholder": "${CURRENT_SESSION}",
+      "default": "${CURRENT_SESSION}"
+    },
+    {
+      "id": "sourcePath",
+      "label": "Source Path",
+      "type": "string",
+      "required": true,
+      "placeholder": "C:\\Windows\\Temp\\update.exe",
+      "default": "C:\\Windows\\Temp\\update.exe"
+    },
+    {
+      "id": "destPath",
+      "label": "Destination Path",
+      "type": "string",
+      "required": true,
+      "placeholder": "C:\\Users\\Public\\update.exe",
+      "default": "C:\\Users\\Public\\update.exe"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "listeners": [],
+    "payloads": [],
+    "libraries": [
+      "hunt_1.resource"
+    ]
+  },
+  "robotFramework": {
+    "keyword": "Copy Beacon",
+    "resources": [
+      "hunt_1.resource"
+    ],
+    "keywordArgs": [
+      {
+        "param": "session",
+        "position": 1,
+        "sessionVariable": "CURRENT_SESSION"
+      },
+      {
+        "param": "sourcePath",
+        "position": 2,
+        "variableRef": false
+      },
+      {
+        "param": "destPath",
+        "position": 3,
+        "variableRef": false
+      }
+    ],
+    "documentation": "Copy beacon to evade detection",
+    "tags": [
+      "defense-evasion",
+      "copy"
+    ]
+  }
+}

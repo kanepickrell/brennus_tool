@@ -227,6 +227,20 @@ export interface OpforGlobalSettings {
   /** Payload filename */
   payloadName?: string;
   
+  // === Hunt / Campaign Variables ===
+  /** Local path to initial beacon payload, e.g. ${WORKDIR}update.exe */
+  localInitialBeacon?: string;
+  /** Primary target IP (TARGET1) */
+  target1?: string;
+  /** Secondary target IP (TARGET2) — used by lateral movement modules */
+  target2?: string;
+  /** Artifact/log output directory */
+  artifactDir?: string;
+  /** Enable Cobalt Strike debug mode */
+  debugMode?: string;
+  /** Whether sudo is required to start the teamserver */
+  sudoNeeded?: string;
+
   // === Custom Variables (new) ===
   /** Additional custom variables for Robot Framework */
   customVariables?: Record<string, string>;
