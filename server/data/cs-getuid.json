@@ -5,59 +5,31 @@
   "executionType": "cobalt_strike",
   "estimatedDuration": 5,
   "inputs": [
-    {
-      "id": "session",
-      "label": "Beacon Session",
-      "type": "session",
-      "required": true
-    }
+    { "id": "session", "label": "Beacon Session", "type": "session", "required": true }
   ],
   "outputs": [
-    {
-      "id": "uid_result",
-      "label": "UID Result",
-      "type": "string",
-      "description": "Current user identity string"
-    }
+    { "id": "uid_result", "label": "UID Result", "type": "string", "description": "Current user identity string" }
   ],
   "parameters": [
-    {
-      "id": "session",
-      "label": "Session",
-      "type": "string",
-      "required": true,
-      "placeholder": "${CURRENT_SESSION}",
-      "default": "${CURRENT_SESSION}"
-    }
+    { "id": "session", "label": "Session", "type": "string", "required": true, "placeholder": "${CURRENT_SESSION}", "default": "${CURRENT_SESSION}" }
   ],
   "requirements": {
     "c2Server": true,
     "listeners": [],
     "payloads": [],
-    "libraries": [
-      "hunt_1.resource"
-    ]
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
   },
   "robotFramework": {
-    "keyword": "GetUID",
-    "resources": [
-      "hunt_1.resource"
-    ],
+    "keyword": "Run Getuid",
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
     "keywordArgs": [
-      {
-        "param": "session",
-        "position": 1,
-        "sessionVariable": "CURRENT_SESSION"
-      }
+      { "param": "session", "position": 1, "sessionVariable": "CURRENT_SESSION" }
     ],
     "captureOutput": "UID_RESULT",
-    "pythonCall": "run Getuid",
+    "preKeywordLog": "=== Get UID ===",
     "postKeywordLog": "=== UID: ${UID_RESULT} ===",
-    "documentation": "Get current user identity",
-    "tags": [
-      "discovery",
-      "identity"
-    ]
+    "documentation": "Get current user identity via Run Getuid",
+    "tags": ["discovery", "identity"]
   },
   "tactic": "TA0007",
   "icon": "\ud83d\udd0d"

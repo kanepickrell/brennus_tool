@@ -4,13 +4,20 @@
   "description": "SSH to a Linux host, execute a bash command, capture output, close connection",
   "executionType": "ssh",
   "estimatedDuration": 10,
-  "inputs": [],
+  "inputs": [
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false
+    }
+  ],
   "outputs": [
     {
       "id": "done",
       "label": "Complete",
       "type": "signal",
-      "description": "Node completed \u2014 chain continues"
+      "description": "Node completed — chain continues"
     }
   ],
   "parameters": [
@@ -129,7 +136,7 @@
         "scope": "suite"
       }
     ],
-    "preKeywordLog": "=== SSH \u2192 ${SSH_HOST} | ${SSH_COMMAND} ===",
+    "preKeywordLog": "=== SSH → ${SSH_HOST} | ${SSH_COMMAND} ===",
     "tags": [
       "ssh",
       "execution",
@@ -137,5 +144,5 @@
     ]
   },
   "tactic": "TA0002",
-  "icon": "\ud83d\udc27"
+  "icon": "🐧"
 }

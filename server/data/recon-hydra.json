@@ -4,13 +4,20 @@
   "description": "SSH to jump box and run Hydra password attack against target service",
   "executionType": "ssh",
   "estimatedDuration": 120,
-  "inputs": [],
+  "inputs": [
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false
+    }
+  ],
   "outputs": [
     {
       "id": "done",
       "label": "Complete",
       "type": "signal",
-      "description": "Node completed \u2014 chain continues"
+      "description": "Node completed — chain continues"
     }
   ],
   "parameters": [
@@ -153,7 +160,7 @@
         "scope": "suite"
       }
     ],
-    "preKeywordLog": "=== Hydra \u2192 ${HYDRA_SERVICE}://${HYDRA_TARGET} ===",
+    "preKeywordLog": "=== Hydra → ${HYDRA_SERVICE}://${HYDRA_TARGET} ===",
     "tags": [
       "recon",
       "credential-access",
@@ -162,5 +169,5 @@
     ]
   },
   "tactic": "TA0006",
-  "icon": "\ud83d\udd11"
+  "icon": "🔑"
 }

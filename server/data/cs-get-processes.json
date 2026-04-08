@@ -7,56 +7,30 @@
   "executionType": "cobalt_strike",
   "estimatedDuration": 5,
   "inputs": [
-    {
-      "id": "session",
-      "label": "Beacon Session",
-      "type": "session",
-      "required": true
-    }
+    { "id": "session", "label": "Beacon Session", "type": "session", "required": true }
   ],
   "outputs": [
-    {
-      "id": "process_list",
-      "label": "Process List",
-      "type": "string",
-      "description": "Running processes output"
-    }
+    { "id": "process_list", "label": "Process List", "type": "string", "description": "Running processes output" }
   ],
   "parameters": [
-    {
-      "id": "session",
-      "label": "Session",
-      "type": "string",
-      "required": true,
-      "placeholder": "${CURRENT_SESSION}",
-      "default": "${CURRENT_SESSION}"
-    }
+    { "id": "session", "label": "Session", "type": "string", "required": true, "placeholder": "${CURRENT_SESSION}", "default": "${CURRENT_SESSION}" }
   ],
   "requirements": {
     "c2Server": true,
     "listeners": [],
     "payloads": [],
-    "libraries": [
-      "hunt_1.resource"
-    ]
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
   },
   "robotFramework": {
-    "keyword": "Get Processes",
-    "resources": [
-      "hunt_1.resource"
-    ],
+    "keyword": "Issue Shell Cmd",
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
     "keywordArgs": [
-      {
-        "param": "session",
-        "position": 1,
-        "sessionVariable": "CURRENT_SESSION"
-      }
+      { "param": "session", "position": 1, "sessionVariable": "CURRENT_SESSION" },
+      { "staticValue": "tasklist", "position": 2 }
     ],
     "captureOutput": "PROCESS_LIST",
-    "documentation": "Get running processes",
-    "tags": [
-      "discovery",
-      "processes"
-    ]
+    "preKeywordLog": "=== Get Processes ===",
+    "documentation": "Get running processes via beacon shell",
+    "tags": ["discovery", "processes"]
   }
 }
