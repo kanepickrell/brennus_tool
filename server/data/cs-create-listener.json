@@ -2,114 +2,41 @@
   "_key": "cs-create-listener",
   "name": "Create Listener",
   "tactic": "TA0042",
-  "icon": "\ud83c\udfd7\ufe0f",
+  "icon": "🏗️",
   "description": "Create an HTTP, HTTPS, or SMB listener on the Cobalt Strike teamserver for beacon callbacks",
   "executionType": "cobalt_strike",
   "estimatedDuration": 10,
   "inputs": [
-    {
-      "id": "signal",
-      "label": "Signal",
-      "type": "signal",
-      "required": false
-    }
+    { "id": "signal", "label": "Signal", "type": "signal", "required": false }
   ],
   "outputs": [
-    {
-      "id": "done",
-      "label": "Complete",
-      "type": "signal"
-    }
+    { "id": "done", "label": "Complete", "type": "signal" }
   ],
   "parameters": [
-    {
-      "id": "listenerName",
-      "label": "Listener Name",
-      "type": "string",
-      "required": true,
-      "placeholder": "HTTP",
-      "default": "HTTP"
-    },
-    {
-      "id": "listenerPort",
-      "label": "Port",
-      "type": "number",
-      "required": true,
-      "placeholder": "80",
-      "default": 80
-    },
-    {
-      "id": "listenerType",
-      "label": "Listener Type",
-      "type": "select",
-      "required": true,
-      "options": [
-        "Beacon_HTTP",
-        "Beacon_HTTPS",
-        "Beacon_SMB"
-      ],
-      "default": "Beacon_HTTP"
-    }
+    { "id": "listenerName", "label": "Listener Name", "type": "string", "required": true,  "placeholder": "HTTP",         "default": "HTTP"         },
+    { "id": "listenerPort", "label": "Port",           "type": "number", "required": true,  "placeholder": "80",           "default": 80             },
+    { "id": "listenerType", "label": "Listener Type",  "type": "select", "required": true,  "options": ["Beacon_HTTP", "Beacon_HTTPS"], "default": "Beacon_HTTP" }
   ],
   "requirements": {
     "c2Server": true,
-    "listeners": [],
-    "payloads": [],
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
-    ]
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
   },
   "robotFramework": {
     "keyword": "Create Listener",
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
-    ],
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
     "keywordArgs": [
-      {
-        "param": "listenerName",
-        "position": 1,
-        "variableRef": true,
-        "variableName": "HTTP_LISTENER"
-      },
-      {
-        "param": "listenerPort",
-        "position": 2,
-        "variableRef": true,
-        "variableName": "HTTP_LISTENER_PORT"
-      },
-      {
-        "param": "listenerType",
-        "position": 3,
-        "variableRef": true,
-        "variableName": "HTTP_LISTENER_TYPE"
-      },
-      {
-        "globalSetting": "CS_IP",
-        "position": 4
-      }
+      { "param": "listenerName", "position": 1, "variableRef": true,  "variableName": "HTTP_LISTENER"      },
+      { "param": "listenerPort", "position": 2, "variableRef": true,  "variableName": "HTTP_LISTENER_PORT" },
+      { "param": "listenerType", "position": 3, "variableRef": true,  "variableName": "HTTP_LISTENER_TYPE" },
+      { "globalSetting": "CS_IP",               "position": 4 }
     ],
     "variables": [
-      {
-        "name": "HTTP_LISTENER",
-        "fromParam": "listenerName",
-        "scope": "suite"
-      },
-      {
-        "name": "HTTP_LISTENER_PORT",
-        "fromParam": "listenerPort",
-        "scope": "suite"
-      },
-      {
-        "name": "HTTP_LISTENER_TYPE",
-        "fromParam": "listenerType",
-        "scope": "suite"
-      }
+      { "name": "HTTP_LISTENER",      "fromParam": "listenerName", "scope": "suite" },
+      { "name": "HTTP_LISTENER_PORT", "fromParam": "listenerPort", "scope": "suite" },
+      { "name": "HTTP_LISTENER_TYPE", "fromParam": "listenerType", "scope": "suite" }
     ],
     "preKeywordLog": "=== Creating Listener: ${HTTP_LISTENER} ===",
     "documentation": "Create scenario listeners",
-    "tags": [
-      "c2",
-      "listener"
-    ]
+    "tags": ["c2", "listener"]
   }
 }

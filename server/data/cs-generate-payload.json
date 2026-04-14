@@ -7,111 +7,35 @@
   "executionType": "cobalt_strike",
   "estimatedDuration": 30,
   "inputs": [
-    {
-      "id": "listener_active",
-      "label": "Listener Active",
-      "type": "boolean",
-      "required": true
-    }
+    { "id": "listener_active", "label": "Listener Active", "type": "boolean", "required": true }
   ],
   "outputs": [
-    {
-      "id": "payload_ready",
-      "label": "Payload Ready",
-      "type": "boolean",
-      "description": "Payload file generated and ready"
-    }
+    { "id": "payload_ready", "label": "Payload Ready", "type": "boolean", "description": "Payload file generated and ready" }
   ],
   "parameters": [
-    {
-      "id": "payloadName",
-      "label": "Payload Name",
-      "type": "string",
-      "required": true,
-      "placeholder": "update",
-      "default": "update"
-    },
-    {
-      "id": "payloadTemplate",
-      "label": "Template",
-      "type": "select",
-      "required": true,
-      "options": ["exe", "dll", "powershell", "raw"],
-      "default": "exe"
-    },
-    {
-      "id": "listenerName",
-      "label": "Listener",
-      "type": "string",
-      "required": true,
-      "placeholder": "HTTP",
-      "default": "HTTP"
-    },
-    {
-      "id": "outputDir",
-      "label": "Output Dir",
-      "type": "string",
-      "required": true,
-      "placeholder": "${WORKDIR}",
-      "default": "${WORKDIR}"
-    },
-    {
-      "id": "retries",
-      "label": "Retries",
-      "type": "number",
-      "required": false,
-      "placeholder": "5",
-      "default": 5
-    }
+    { "id": "payloadName",     "label": "Payload Name", "type": "string", "required": true,  "placeholder": "update", "default": "update"        },
+    { "id": "payloadTemplate", "label": "Template",     "type": "select", "required": true,  "options": ["exe", "dll", "powershell", "raw"], "default": "exe" },
+    { "id": "listenerName",    "label": "Listener",     "type": "string", "required": true,  "placeholder": "HTTP",   "default": "HTTP"          },
+    { "id": "outputDir",       "label": "Output Dir",   "type": "string", "required": true,  "placeholder": "${WORKDIR}", "default": "${WORKDIR}" },
+    { "id": "retries",         "label": "Retries",      "type": "number", "required": false, "placeholder": "5",      "default": 5               }
   ],
   "requirements": {
     "c2Server": true,
     "listeners": ["HTTP"],
-    "payloads": [],
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
-    ]
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
   },
   "robotFramework": {
-    "keyword": "Generate Payload",
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
-    ],
+    "keyword": "Create Payload",
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
     "keywordArgs": [
-      {
-        "param": "payloadName",
-        "position": 1,
-        "variableRef": true,
-        "variableName": "HTTP_PAYLOAD_NAME"
-      },
-      {
-        "param": "payloadTemplate",
-        "position": 2,
-        "variableRef": false
-      },
-      {
-        "param": "listenerName",
-        "position": 3,
-        "variableRef": true,
-        "variableName": "HTTP_LISTENER"
-      },
-      {
-        "param": "outputDir",
-        "position": 4,
-        "variableRef": false
-      },
-      {
-        "param": "retries",
-        "position": 5,
-        "variableRef": false
-      }
+      { "param": "payloadName",     "position": 1, "variableRef": true, "variableName": "HTTP_PAYLOAD_NAME" },
+      { "param": "payloadTemplate", "position": 2, "variableRef": false },
+      { "param": "listenerName",    "position": 3, "variableRef": true, "variableName": "HTTP_LISTENER"     },
+      { "param": "outputDir",       "position": 4, "variableRef": false },
+      { "param": "retries",         "position": 5, "variableRef": false }
     ],
     "variables": [
-      {
-        "name": "HTTP_PAYLOAD_NAME",
-        "fromParam": "payloadName",
-        "scope": "suite"
-      }
+      { "name": "HTTP_PAYLOAD_NAME", "fromParam": "payloadName", "scope": "suite" }
     ],
     "captureOutput": "PAYLOAD_PATH",
     "postKeywordLog": "=== Payload Location: ${PAYLOAD_PATH} ===",

@@ -56,6 +56,31 @@ const MODULE_LIBRARIES: Record<string, string[]> = {
   'screenshot':               ['cobaltstrikec2/cobaltstrike.py'],
 };
 
+// ── Static library init args fallback ────────────────────────────────────────
+// When cs-start-c2 is on canvas its libraryArgs are used to emit init params
+// on the Library import line. This static map is the Tier 3 fallback for stale
+// canvas nodes that predate the libraryArgs field in the JSON.
+//
+// Maps library path → ordered init arg definitions.
+// paramName: the Python __init__ kwarg name
+// globalSetting: key into OpforGlobalSettings via getGlobalSetting()
+// ─────────────────────────────────────────────────────────────────────────────
+interface StaticLibraryArg {
+  paramName: string;
+  globalSetting: string;
+  position: number;
+}
+
+const MODULE_LIBRARY_INIT_ARGS: Record<string, StaticLibraryArg[]> = {
+  'cs-start-c2': [
+    { paramName: 'user',          globalSetting: 'CS_USER',     position: 1 },
+    { paramName: 'cs_password',   globalSetting: 'CS_PASS',     position: 2 },
+    { paramName: 'cs_dir',        globalSetting: 'CS_DIR',      position: 3 },
+    { paramName: 'port',          globalSetting: 'CS_PORT',     position: 4 },
+    { paramName: 'debug',         globalSetting: 'DEBUG_MODE',  position: 5 },
+  ],
+};
+
 // ── Static suite-variable fallback map ───────────────────────────────────────
 // Mirrors the robotFramework.variables[] arrays in each payload JSON.
 // Used as a Tier 3 fallback when a node was placed on canvas BEFORE the current
@@ -84,7 +109,7 @@ const MODULE_SUITE_VARS: Record<string, StaticVarDef[]> = {
     { name: 'TARGET2', fromParam: 'targetIp', default: '172.16.2.3', scope: 'suite' },
   ],
   'cs-persistence-registry': [
-    { name: 'APPDATA_PATH', fromParam: 'appdataPath', default: 'AppData\\Local\\Temp',                                            scope: 'suite' },
+    { name: 'APPDATA_PATH', fromParam: 'appdataPath', default: 'AppData\\Local\\Temp',                                                scope: 'suite' },
     { name: 'RUN_KEY',      fromParam: 'runKey',       default: 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', scope: 'suite' },
   ],
   'cs-network-enumerate': [
@@ -92,8 +117,8 @@ const MODULE_SUITE_VARS: Record<string, StaticVarDef[]> = {
     { name: 'ARCH',        fromParam: 'arch',        default: 'x64',     scope: 'suite' },
   ],
   'cs-stage-data': [
-    { name: 'SOURCE_PATH', fromParam: 'sourcePath', default: 'C:\\Users\\*\\Documents',         scope: 'suite' },
-    { name: 'DEST_PATH',   fromParam: 'destPath',   default: 'C:\\Windows\\Temp\\staged.zip',  scope: 'suite' },
+    { name: 'SOURCE_PATH', fromParam: 'sourcePath', default: 'C:\\Users\\*\\Documents',        scope: 'suite' },
+    { name: 'DEST_PATH',   fromParam: 'destPath',   default: 'C:\\Windows\\Temp\\staged.zip', scope: 'suite' },
   ],
 };
 
@@ -131,6 +156,26 @@ interface KeywordArg {
   argName?: string;
 }
 
+/**
+ * Library init arg — passed to the Python library __init__ via the
+ * Library import line in *** Settings ***, NOT to the keyword call.
+ *
+ * Example output:
+ *   Library    cobaltstrikec2/cobaltstrike.py
+ *   ...        local_bind_ip=${CS_IP}
+ *   ...        user=${CS_USER}
+ */
+interface LibraryArg {
+  /** Python __init__ parameter name, e.g. "local_bind_ip" */
+  paramName: string;
+  /** Key into OpforGlobalSettings via getGlobalSetting(), e.g. "CS_IP" */
+  globalSetting?: string;
+  /** Literal static value if not from globalSettings */
+  staticValue?: string;
+  /** Ordering */
+  position: number;
+}
+
 interface VariableDefinition {
   name: string;
   fromParam?: string;
@@ -145,6 +190,13 @@ interface RobotFrameworkConfig {
   resources?: string[];
   keyword: string;
   keywordArgs?: KeywordArg[];
+  /**
+   * Init args passed to the Library import line — used by cs-start-c2 to
+   * configure the cobaltstrike.py __init__ with connection details.
+   * These are emitted in *** Settings *** on the Library line, never in
+   * the test body keyword call.
+   */
+  libraryArgs?: LibraryArg[];
   variables?: VariableDefinition[];
   preKeywordLog?: string;
   postKeywordLog?: string;
@@ -398,7 +450,7 @@ function substituteStatementVariables(
   // Legacy variable name remaps — stale canvas nodes may have old names baked
   // into preKeywordLog strings. Remap them to their current canonical names.
   const LEGACY_VAR_RENAMES: Record<string, string> = {
-    'PERSISTENCE_KEY': 'RUN_KEY',   // cs-persistence-registry rename
+    'PERSISTENCE_KEY': 'RUN_KEY',
     'PAYLOAD_NAME':    'HTTP_PAYLOAD_NAME',
     'LISTENER_NAME':   'HTTP_LISTENER',
   };
@@ -441,7 +493,6 @@ function buildSuiteLifecycleLine(
     return lines;
   }
 
-  // First continuation arg goes on the same logical line
   lines.push(`${prefix.padEnd(20)}${keyword}`);
 
   keywordArgs
@@ -477,30 +528,36 @@ function generateSettings(
 ): { content: string; warnings: string[] } {
   const warnings: string[] = [];
   const libraries = new Set<string>();
-  const resources = new Set<string>();   // kept for future use, currently empty
- 
+  const resources = new Set<string>();
+
   let suiteSetupNode: Node | null = null;
   let suiteTeardownNode: Node | null = null;
- 
+
+  // ── Collect library init args (libraryArgs) ───────────────────────────────
+  // Maps library path → ordered init arg list.
+  // Only the first node that contributes libraryArgs for a given library wins —
+  // in practice only cs-start-c2 provides these for cobaltstrike.py.
+  //
+  // Three-tier resolution per node:
+  //   Tier 1: robotConfig.libraryArgs[] from current payload JSON
+  //   Tier 2: MODULE_LIBRARY_INIT_ARGS static map keyed by module _key
+  //   Tier 3: nothing (library imported without init args — functional but
+  //           library won't know connection details until Start C2 is called,
+  //           which is fine for libraries that configure lazily)
+  const libraryInitArgs = new Map<string, Array<{ paramName: string; value: string }>>();
+
   allNodes.forEach(node => {
     const data = node.data as OpforNodeData;
     const robotConfig = data.definition.robotFramework as RobotFrameworkConfig | undefined;
- 
+
     if (!robotConfig) {
       warnings.push(`Node "${data.definition.name}" missing robotFramework config`);
       return;
     }
- 
-    // ── Collect Library imports — three-tier resolution ───────────────────
-    // Tier 1: robotFramework.libraries[] on the node def (set when payload was
-    //         fetched fresh via getModulePayload at drop time).
-    // Tier 2: requirements.libraries[] on the node def, minus hunt_1.resource
-    //         (also from the payload JSON, same condition as tier 1).
-    // Tier 3: MODULE_LIBRARIES static map keyed by _key — always available,
-    //         covers nodes placed before updated JSONs were deployed (stale
-    //         canvas definitions baked into localStorage autosave).
+
     const moduleKey: string = (data.definition as any)._key || data.definition.id || '';
 
+    // ── Collect Library imports — three-tier resolution ───────────────────
     const rfLibs: string[] = robotConfig.libraries ?? [];
     const reqLibs: string[] = (
       (data.definition.requirements as any)?.libraries ?? []
@@ -514,36 +571,80 @@ function generateSettings(
 
     nodeLibraries.forEach(lib => libraries.add(lib));
 
-    // Resource imports — kept for extensibility, hunt_1.resource excluded.
+    // Resource imports
     if (robotConfig.resources) {
       robotConfig.resources
         .filter(r => r !== 'hunt_1.resource')
         .forEach(r => resources.add(r));
     }
- 
+
+    // ── Collect library init args ─────────────────────────────────────────
+    // Tier 1: from robotConfig.libraryArgs in current payload JSON
+    // Tier 2: from MODULE_LIBRARY_INIT_ARGS static fallback
+    const jsonLibraryArgs: LibraryArg[] = robotConfig.libraryArgs ?? [];
+    const staticLibraryArgs: StaticLibraryArg[] = MODULE_LIBRARY_INIT_ARGS[moduleKey] ?? [];
+
+    const resolvedLibraryArgs =
+      jsonLibraryArgs.length > 0 ? jsonLibraryArgs : staticLibraryArgs;
+
+    if (resolvedLibraryArgs.length > 0) {
+      nodeLibraries.forEach(lib => {
+        // Only set init args once per library — first node wins
+        if (!libraryInitArgs.has(lib)) {
+          const args = [...resolvedLibraryArgs]
+            .sort((a, b) => a.position - b.position)
+            .map(arg => {
+              let value = '';
+              if (arg.globalSetting) {
+                value = `\${${arg.globalSetting}}`;
+              } else if ((arg as LibraryArg).staticValue) {
+                value = (arg as LibraryArg).staticValue!;
+              }
+              return { paramName: arg.paramName, value };
+            })
+            .filter(a => a.value !== '');
+          if (args.length > 0) {
+            libraryInitArgs.set(lib, args);
+          }
+        }
+      });
+    }
+
     if (robotConfig.isSuiteSetup)    suiteSetupNode    = node;
     if (robotConfig.isSuiteTeardown) suiteTeardownNode = node;
   });
- 
+
   const lines: string[] = [
     '*** Settings ***',
     `Documentation       ${globalSettings.executionPlanName || 'Generated Workflow'}`,
     '',
   ];
- 
-  // Libraries — sorted for deterministic output
+
+  // ── Library imports ───────────────────────────────────────────────────────
+  // Sort for deterministic output. cobaltstrikec2/cobaltstrike.py will sort
+  // before SSHLibrary and SCPLibrary alphabetically, which is the correct order
+  // (main library must be imported before helpers that depend on it).
   Array.from(libraries).sort().forEach(lib => {
-    lines.push(`Library             ${lib}`);
+    const initArgs = libraryInitArgs.get(lib);
+    if (initArgs && initArgs.length > 0) {
+      // Library with named init args — emit as multi-line continuation
+      lines.push(`Library             ${lib}`);
+      initArgs.forEach(arg => {
+        lines.push(`...                 ${arg.paramName}=\${${arg.value.slice(2, -1)}}`);
+      });
+    } else {
+      lines.push(`Library             ${lib}`);
+    }
   });
- 
-  // Resources (empty in standard CS campaigns, but respected if present)
+
+  // Resources
   if (resources.size > 0) {
     if (libraries.size > 0) lines.push('');
     Array.from(resources).sort().forEach(res => {
       lines.push(`Resource            ${res}`);
     });
   }
- 
+
   // Suite Setup
   if (suiteSetupNode) {
     const data = (suiteSetupNode as Node).data as OpforNodeData;
@@ -557,7 +658,7 @@ function generateSettings(
     );
     lines.push(...setupLines);
   }
- 
+
   // Suite Teardown
   if (suiteTeardownNode) {
     const data = (suiteTeardownNode as Node).data as OpforNodeData;
@@ -571,7 +672,7 @@ function generateSettings(
     );
     lines.push(...teardownLines);
   }
- 
+
   return { content: lines.join('\n'), warnings };
 }
 
@@ -585,9 +686,6 @@ function generateVariables(
   const lines: string[] = ['*** Variables ***'];
 
   // ── C2 Infrastructure Variables ───────────────────────────────────────────
-  // Only true campaign-level config lives here.
-  // Target IPs, payload names, beacon paths are declared by their respective
-  // nodes as suite-scoped variables in the per-node blocks below.
   const c2Vars: Array<{ name: string; value: string }> = [];
 
   if (globalSettings.workdir)    c2Vars.push({ name: 'WORKDIR',  value: globalSettings.workdir });
@@ -597,8 +695,6 @@ function generateVariables(
   if (globalSettings.csDir)      c2Vars.push({ name: 'CS_DIR',   value: globalSettings.csDir });
   if (globalSettings.csPort)     c2Vars.push({ name: 'CS_PORT',  value: globalSettings.csPort });
 
-  // ARTIFACT_DIR — defaults to artifact/<campaign-name> so each campaign gets
-  // its own folder. Slugify the name to make it filesystem-safe.
   const campaignSlug = (globalSettings.executionPlanName || 'campaign')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
@@ -608,12 +704,6 @@ function generateVariables(
   c2Vars.push({ name: 'DEBUG_MODE',   value: globalSettings.debugMode  ?? '${False}' });
   c2Vars.push({ name: 'SUDO_NEEDED',  value: globalSettings.sudoNeeded ?? '${False}' });
 
-  // LOCAL_INITIAL_BEACON — derived from WORKDIR + the payload name produced by
-  // cs-generate-payload. Defaults to ${WORKDIR}update.exe if no payload node
-  // is on canvas. When cs-generate-payload is present its HTTP_PAYLOAD_NAME
-  // variable is declared in the per-node block below, but we still need this
-  // global reference so cs-initial-access can use it before the payload keyword
-  // runs in the test body.
   const payloadNode = allNodes.find(n =>
     ((n.data as OpforNodeData).definition as any)._key === 'cs-generate-payload' ||
     (n.data as OpforNodeData).definition.id === 'cs-generate-payload'
@@ -631,7 +721,7 @@ function generateVariables(
     });
   }
 
-  // Per-node variable blocks (listener names, payload names, etc.)
+  // Per-node variable blocks
   const nodeVariableBlocks: Array<{ label: string; vars: Array<{ name: string; value: string | number }> }> = [];
 
   allNodes.forEach(node => {
@@ -643,14 +733,10 @@ function generateVariables(
 
     const blockVars: Array<{ name: string; value: string | number }> = [];
 
-    // Determine which variable definitions to use:
-    //   1. Node's own robotConfig.variables (fresh drop with current payload JSON)
-    //   2. MODULE_SUITE_VARS static fallback (stale canvas node)
     const moduleId = (data.definition as any)._key || data.definition.id || '';
     const ownVars: VariableDefinition[] = robotConfig?.variables ?? [];
     const staticVars: StaticVarDef[] = MODULE_SUITE_VARS[moduleId] ?? [];
 
-    // Build a merged set: ownVars take priority; fill gaps from staticVars
     const ownVarNames = new Set(ownVars.map(v => v.name));
     const mergedVars: Array<{ name: string; fromParam?: string; default?: string; fromGlobalSetting?: string }> = [
       ...ownVars,
@@ -658,16 +744,11 @@ function generateVariables(
     ];
 
     mergedVars.forEach(varDef => {
-      // ownVars entries have a scope field; staticVars are always suite-scoped
       const scope = (varDef as VariableDefinition).scope ?? 'suite';
       if (scope === 'suite' || scope === 'global') {
         let value: string | number | undefined;
 
         if (varDef.fromParam) {
-          // Try to read from node params first; fall back to static default
-          // so stale canvas nodes (where params may be empty) still emit variables.
-          // Reject Robot variable references (${...}) as param values — these are
-          // template placeholders, not real values (e.g. targetIp = "${TARGET2}").
           const rawParamValue = getParameterValue(varDef.fromParam, data);
           const isRobotVarRef = typeof rawParamValue === 'string'
             && rawParamValue.startsWith('${') && rawParamValue.endsWith('}');
@@ -836,7 +917,6 @@ function generateTestCases(
               argValue = strValue;
             }
           } else if (arg.variableName) {
-            // Bare variableName with no param — reference a variable by name directly
             const instanceVarName = getInstanceVariableName(arg.variableName, instance.variablePrefix);
             argValue = `\${${instanceVarName}}`;
           }
@@ -915,7 +995,6 @@ export function generateRobotScript(
   const nodeInstances = buildNodeInstances(validNodes);
   const connectionContext = buildConnectionContext(edges);
 
-  // Modules that are legitimately reused across the chain — suppress duplicate warnings.
   const MULTI_INSTANCE_OK = new Set([
     'cs-session-sleep', 'cs-get-processes', 'cs-query-registry',
     'cs-list-directory', 'cs-get-arp', 'cs-getuid', 'cs-get-pwd',
@@ -923,7 +1002,6 @@ export function generateRobotScript(
     'cs-create-listener', 'cs-generate-payload',
   ]);
 
-  // Warn on duplicate module instances (skip known-safe reuse)
   const instanceCounts = new Map<string, number>();
   nodeInstances.forEach(inst => {
     instanceCounts.set(inst.moduleId, Math.max(instanceCounts.get(inst.moduleId) || 0, inst.instanceIndex));

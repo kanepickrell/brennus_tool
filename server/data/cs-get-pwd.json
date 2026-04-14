@@ -2,61 +2,34 @@
   "_key": "cs-get-pwd",
   "name": "Get Working Directory",
   "tactic": "TA0007",
-  "icon": "\ud83d\udd0d",
-  "description": "Get the current working directory on target via beacon using echo %CD%",
+  "icon": "🔍",
+  "description": "Get the current working directory on target via beacon",
   "executionType": "cobalt_strike",
   "estimatedDuration": 5,
   "inputs": [
-    {
-      "id": "session",
-      "label": "Beacon Session",
-      "type": "session",
-      "required": true
-    }
+    { "id": "session", "label": "Beacon Session", "type": "session", "required": true }
   ],
   "outputs": [
-    {
-      "id": "pwd_result",
-      "label": "Working Directory",
-      "type": "string",
-      "description": "Current working directory path"
-    }
+    { "id": "pwd_result", "label": "Working Directory", "type": "string", "description": "Current working directory path" }
   ],
   "parameters": [
-    {
-      "id": "session",
-      "label": "Session",
-      "type": "string",
-      "required": true,
-      "placeholder": "${CURRENT_SESSION}",
-      "default": "${CURRENT_SESSION}"
-    }
+    { "id": "session", "label": "Session", "type": "string", "required": true, "placeholder": "${CURRENT_SESSION}", "default": "${CURRENT_SESSION}" }
   ],
   "requirements": {
     "c2Server": true,
-    "listeners": [],
-    "payloads": [],
-    "libraries": [
-      "hunt_1.resource"
-    ]
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
   },
   "robotFramework": {
-    "keyword": "Get Pwd",
-    "resources": [
-      "hunt_1.resource"
-    ],
+    "keyword": "Issue Shell Cmd",
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
     "keywordArgs": [
-      {
-        "param": "session",
-        "position": 1,
-        "sessionVariable": "CURRENT_SESSION"
-      }
+      { "param": "session", "position": 1, "sessionVariable": "CURRENT_SESSION" },
+      { "staticValue": "echo %CD%", "position": 2 }
     ],
     "captureOutput": "PWD_RESULT",
-    "documentation": "Get current working directory",
-    "tags": [
-      "discovery",
-      "filesystem"
-    ]
+    "preKeywordLog": "=== Get Working Directory ===",
+    "postKeywordLog": "=== PWD: ${PWD_RESULT} ===",
+    "documentation": "Get current working directory via beacon shell",
+    "tags": ["discovery", "filesystem"]
   }
 }

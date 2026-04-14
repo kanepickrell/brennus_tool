@@ -5,70 +5,32 @@
   "executionType": "cobalt_strike",
   "estimatedDuration": 5,
   "inputs": [
-    {
-      "id": "session",
-      "label": "Beacon Session",
-      "type": "session",
-      "required": true
-    }
+    { "id": "session", "label": "Beacon Session", "type": "session", "required": true }
   ],
   "outputs": [
-    {
-      "id": "session",
-      "label": "Beacon Session",
-      "type": "session",
-      "description": "Session with updated sleep"
-    }
+    { "id": "session", "label": "Beacon Session", "type": "session", "description": "Session with updated sleep" }
   ],
   "parameters": [
-    {
-      "id": "sleepTime",
-      "label": "Sleep Time (seconds)",
-      "type": "number",
-      "required": true,
-      "placeholder": "60",
-      "default": 60
-    },
-    {
-      "id": "jitter",
-      "label": "Jitter %",
-      "type": "number",
-      "required": false,
-      "placeholder": "20",
-      "default": 20
-    }
+    { "id": "sleepTime", "label": "Sleep Time (seconds)", "type": "number", "required": true,  "placeholder": "60", "default": 60 },
+    { "id": "jitter",    "label": "Jitter %",             "type": "number", "required": false, "placeholder": "20", "default": 20 }
   ],
   "requirements": {
     "c2Server": true,
-    "listeners": [],
-    "payloads": [],
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
-    ]
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
   },
   "robotFramework": {
     "keyword": "Session Sleep",
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
+    "variables": [
+      { "name": "CURRENT_SESSION", "default": "0",  "scope": "suite" },
+      { "name": "SLEEP_TIME",      "fromParam": "sleepTime", "default": "60", "scope": "suite" },
+      { "name": "JITTER",          "fromParam": "jitter",    "default": "20", "scope": "suite" }
     ],
     "keywordArgs": [
-      {
-        "param": "session",
-        "position": 1,
-        "sessionVariable": "CURRENT_SESSION"
-      },
-      {
-        "param": "sleepTime",
-        "position": 2,
-        "variableRef": false
-      },
-      {
-        "param": "jitter",
-        "position": 3,
-        "variableRef": false
-      }
+      { "param": "session",   "position": 1, "sessionVariable": "CURRENT_SESSION" },
+      { "param": "sleepTime", "position": 2, "variableRef": true, "variableName": "SLEEP_TIME" },
+      { "param": "jitter",    "position": 3, "variableRef": true, "variableName": "JITTER" }
     ],
-    "pythonCall": "Session Sleep",
     "documentation": "Set beacon sleep and jitter",
     "tags": ["c2", "evasion"]
   },

