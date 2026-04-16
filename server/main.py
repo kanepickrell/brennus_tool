@@ -322,7 +322,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Operator API",
     description="Backend API for Lumen Campaign Studio",
-    version="1.3.0",
+    version="1.3.1",
     lifespan=lifespan
 )
 
@@ -646,7 +646,7 @@ async def teamserver_status():
     log_path = _teamserver_log_path or "/tmp/lumen_teamserver.log"
     log_tail: List[str] = []
     try:
-        with open(log_path, "r") as f:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
             log_tail = [l.rstrip() for l in f.readlines()[-20:]]
     except Exception:
         pass
@@ -690,7 +690,7 @@ async def stop_teamserver_endpoint():
 async def teamserver_logs(lines: int = 100):
     log_path = _teamserver_log_path or "/tmp/lumen_teamserver.log"
     try:
-        with open(log_path, "r") as f:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
             all_lines = f.readlines()
         return {"lines": [l.rstrip() for l in all_lines[-lines:]],
                 "path": log_path, "total": len(all_lines)}
@@ -711,7 +711,7 @@ async def execute_robot(request: RobotExecutionRequest, background_tasks: Backgr
     work_dir = Path(tempfile.gettempdir()) / "operator_robot" / execution_id
     work_dir.mkdir(parents=True, exist_ok=True)
     script_path = work_dir / (request.script_name or "workflow.robot")
-    script_path.write_text(request.script_content)
+    script_path.write_text(request.script_content, encoding="utf-8")
     _executions[execution_id] = {
         "id": execution_id, "status": "pending", "script_path": str(script_path),
         "started_at": datetime.now().isoformat(), "completed_at": None,
@@ -737,7 +737,7 @@ async def run_robot_script(execution_id: str, script_path: Path, work_dir: Path,
             line = await process.stdout.readline()
             if not line:
                 break
-            output_lines.append(line.decode().rstrip())
+            output_lines.append(line.decode(errors="replace").rstrip())
             _executions[execution_id]["output"] = output_lines
         await process.wait()
         _executions[execution_id]["return_code"] = process.returncode
@@ -877,7 +877,7 @@ async def create_terminal_session(request: TerminalRequest):
     elif not (CS_IP or CS_PASS):
         print(f"[terminal] WARNING: CS_IP and CS_PASS not set — library will use defaults")
 
-    script_path.write_text(script_content)
+    script_path.write_text(script_content, encoding="utf-8")
 
     _terminal_sessions[session_id] = {
         "id": session_id, "script_path": str(script_path), "work_dir": str(work_dir),
@@ -1000,7 +1000,7 @@ async def test_robot_execution():
         "    Should Be Equal As Numbers    ${result}    2\n"
     )
     script_path = work_dir / "test.robot"
-    script_path.write_text(test_script)
+    script_path.write_text(test_script, encoding="utf-8")
     cmd = _robot_cmd() + ["--outputdir", str(work_dir / "output"), "--consolecolors", "off", str(script_path)]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=str(work_dir))
@@ -1023,7 +1023,7 @@ async def get_library_modules(search: Optional[str] = None, limit: int = 500):
         return {"modules": [], "total": 0}
     for json_file in sorted(DATA_DIR.glob("*.json")):
         try:
-            data = json.loads(json_file.read_text())
+            data = json.loads(json_file.read_text(encoding="utf-8"))
             module = {
                 "_key": data.get("_key", json_file.stem),
                 "id": data.get("_key", json_file.stem),
@@ -1047,7 +1047,7 @@ async def get_library_modules(search: Optional[str] = None, limit: int = 500):
                     continue
             modules.append(module)
         except Exception as e:
-            print(f"Warning: Could not load {json_file.name}: {e}")
+            print(f"Warning: Could not load {json_file.name}: {type(e).__name__}: {e}")
     return {"modules": modules[:limit], "total": len(modules)}
 
 
@@ -1057,7 +1057,7 @@ async def get_module_payload(module_key: str):
     if not payload_path.exists():
         raise HTTPException(status_code=404, detail=f"Payload not found: {module_key}")
     try:
-        return json.loads(payload_path.read_text())
+        return json.loads(payload_path.read_text(encoding="utf-8"))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read payload: {e}")
 
@@ -1083,7 +1083,7 @@ async def list_custom_commands():
     modules = []
     for json_file in sorted(CUSTOM_COMMANDS_DIR.glob("*.json")):
         try:
-            data = json.loads(json_file.read_text())
+            data = json.loads(json_file.read_text(encoding="utf-8"))
             modules.append({
                 "_key": data.get("_key", data.get("key", json_file.stem)),
                 "id": data.get("_key", data.get("key", json_file.stem)),
@@ -1101,7 +1101,7 @@ async def list_custom_commands():
                 "payload_url": f"/api/custom-commands/{json_file.stem}",
             })
         except Exception as e:
-            print(f"Warning: Could not load custom command {json_file.name}: {e}")
+            print(f"Warning: Could not load custom command {json_file.name}: {type(e).__name__}: {e}")
     return {"modules": modules, "total": len(modules)}
 
 
@@ -1112,7 +1112,7 @@ async def get_custom_command(key: str):
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Custom command not found: {key}")
     try:
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read custom command: {e}")
 
@@ -1134,7 +1134,7 @@ async def save_custom_command(request: CustomCommandRequest):
 
     path = _custom_cmd_path(request.key)
     try:
-        path.write_text(json.dumps(payload, indent=2))
+        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         return {"status": "saved", "key": request.key, "path": str(path), "payload": payload}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save custom command: {e}")
@@ -1168,7 +1168,7 @@ async def list_campaigns():
     campaigns = []
     for f in sorted(CAMPAIGNS_DIR.glob("*.lumen"), key=lambda x: x.stat().st_mtime, reverse=True):
         try:
-            data = json.loads(f.read_text())
+            data = json.loads(f.read_text(encoding="utf-8"))
             meta = data.get("metadata", {})
             campaigns.append({
                 "name": meta.get("name", f.stem), "description": meta.get("description", ""),
@@ -1177,7 +1177,7 @@ async def list_campaigns():
                 "nodeCount": len(data.get("nodes", [])), "edgeCount": len(data.get("edges", [])),
             })
         except Exception as e:
-            print(f"Warning: Could not read {f.name}: {e}")
+            print(f"Warning: Could not read {f.name}: {type(e).__name__}: {e}")
     return {"campaigns": campaigns, "total": len(campaigns)}
 
 
@@ -1185,7 +1185,7 @@ async def list_campaigns():
 async def save_campaign(request: CampaignSaveRequest):
     path = _campaign_path(request.name)
     try:
-        path.write_text(json.dumps(request.workflow, indent=2))
+        path.write_text(json.dumps(request.workflow, indent=2, ensure_ascii=False), encoding="utf-8")
         return {"status": "saved", "name": request.name, "path": str(path)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save campaign: {e}")
@@ -1197,7 +1197,7 @@ async def load_campaign(name: str):
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Campaign not found: {name}")
     try:
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load campaign: {e}")
 

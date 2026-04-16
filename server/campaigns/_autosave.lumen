@@ -4,8 +4,8 @@
     "name": "_autosave",
     "description": "Auto-saved workflow",
     "author": "ditch",
-    "created": "2026-04-16T16:20:41.456Z",
-    "lastModified": "2026-04-16T16:20:41.456Z",
+    "created": "2026-04-16T16:45:18.456Z",
+    "lastModified": "2026-04-16T16:45:18.456Z",
     "tags": [
       "autosave"
     ]
@@ -38,7 +38,7 @@
         "definition": {
           "id": "ph-start-http-server",
           "name": "Start HTTP Server",
-          "icon": "\ud83c\udf10",
+          "icon": "🌐",
           "tactic": "TA0001",
           "category": "Cobalt Strike",
           "subcategory": "",
@@ -177,8 +177,8 @@
   ],
   "edges": [],
   "viewport": {
-    "x": 1254,
-    "y": 298.5,
-    "zoom": 1.5
+    "x": 1150,
+    "y": 339.3,
+    "zoom": 0.7
   }
 }
