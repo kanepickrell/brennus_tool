@@ -35,18 +35,32 @@ if sys.platform != "win32":
 if not PTY_AVAILABLE:
     print("Note: PTY not available (Windows or missing modules). Using subprocess fallback.")
 
-# Import C2 library
+# ---------------------------------------------------------------------------
+# Gap 1 fix: import from cobaltstrike_module (the shim) instead of a
+# non-existent top-level 'cobaltstrike' module.
+# ---------------------------------------------------------------------------
 try:
-    from cobaltstrike import (
+    from cobaltstrike_module import (
         start_c2, stop_c2, is_connected, get_teamserver_info,
         create_listener, list_listeners,
         create_payload, list_payloads,
-        get_status as get_c2_status, reset as reset_c2
+        get_status as get_c2_status, reset as reset_c2,
     )
     C2_AVAILABLE = True
 except ImportError:
     C2_AVAILABLE = False
-    print("Warning: cobaltstrike module not found")
+    print("Warning: cobaltstrike_module not found — C2 API endpoints disabled")
+
+# ---------------------------------------------------------------------------
+# Gap 2 fix: robot_script_builder injects CS credentials into generated
+# .robot scripts before they are written to the temp working directory.
+# ---------------------------------------------------------------------------
+try:
+    from robot_script_builder import inject_cs_settings
+    SCRIPT_BUILDER_AVAILABLE = True
+except ImportError:
+    SCRIPT_BUILDER_AVAILABLE = False
+    print("Warning: robot_script_builder not found — CS library args will not be injected")
 
 
 # =============================================================================
@@ -112,22 +126,16 @@ def _robot_cmd() -> List[str]:
     When NOT frozen (dev mode), sys.executable is the real Python — use normally.
     """
     if not getattr(sys, 'frozen', False):
-        # Running from source — sys.executable is real Python, all good
         return [sys.executable, "-m", "robot"]
 
-    # --- Frozen build: find robot or python3 outside the bundle ---
-
-    # 1. robot binary via PATH (picks up ~/.local/bin/robot if PATH was exported in start.sh)
     robot_on_path = shutil.which("robot")
     if robot_on_path and Path(robot_on_path).exists():
         return [robot_on_path]
 
-    # 2. Common fixed locations
     for r in ["/home/bah/.local/bin/robot", "/usr/local/bin/robot", "/usr/bin/robot"]:
         if Path(r).exists():
             return [r]
 
-    # 3. system python3 + "-m robot"
     py_on_path = shutil.which("python3")
     if py_on_path and Path(py_on_path).exists():
         return [py_on_path, "-m", "robot"]
@@ -136,7 +144,6 @@ def _robot_cmd() -> List[str]:
         if Path(p).exists():
             return [p, "-m", "robot"]
 
-    # Last resort — will surface a clear error in the terminal output
     return ["/usr/bin/python3", "-m", "robot"]
 
 
@@ -193,7 +200,6 @@ def _launch_teamserver(ip: str, password: str, cs_dir: str) -> Dict[str, Any]:
             start_new_session=True,
         )
 
-        # Brief wait to catch immediate failures
         time.sleep(2)
         if _teamserver_proc.poll() is not None:
             return {
@@ -253,6 +259,7 @@ def _resolve_cs_library() -> Optional[Path]:
 async def lifespan(app: FastAPI):
     print("🚀 Operator API Server starting...")
     print(f"   C2 Library: {'Available' if C2_AVAILABLE else 'Not Found'}")
+    print(f"   Script Builder: {'Available' if SCRIPT_BUILDER_AVAILABLE else 'Not Found'}")
     print(f"   Robot Framework: {check_robot_installed()}")
     print(f"   Robot command: {' '.join(_robot_cmd())}")
     print(f"   Ollama: {OLLAMA_HOST} ({OLLAMA_MODEL})")
@@ -260,7 +267,6 @@ async def lifespan(app: FastAPI):
     if DATA_DIR.exists():
         print(f"   Module JSON files: {len(list(DATA_DIR.glob('*.json')))}")
 
-    # Report CS library resolution
     cs_lib = _resolve_cs_library()
     if cs_lib:
         is_mock = str(cs_lib).startswith(str(Path(__file__).parent))
@@ -508,6 +514,7 @@ async def get_infrastructure_status():
         },
         "llm": {"available": llm_ok, "host": OLLAMA_HOST, "model": OLLAMA_MODEL},
         "python": {"version": sys.version, "executable": " ".join(_robot_cmd())},
+        "script_builder": {"available": SCRIPT_BUILDER_AVAILABLE},
     }
 
 
@@ -777,6 +784,9 @@ async def create_terminal_session(request: TerminalRequest):
     Create a Robot execution session.
     Copies the real cobaltstrikec2/ library into the temp working directory
     so Robot finds it via the relative import in generated .robot files.
+
+    Gap 2 fix: CS credentials are injected into the Library declaration
+    before the script is written to disk.
     """
     session_id = str(uuid.uuid4())
     import tempfile
@@ -801,12 +811,33 @@ async def create_terminal_session(request: TerminalRequest):
         shutil.copy(resource_file, work_dir / resource_file.name)
 
     script_path = work_dir / (request.script_name or "workflow.robot")
-    script_path.write_text(request.script_content)
+
+    # ------------------------------------------------------------------
+    # Gap 2 fix: inject CS constructor args into the Library declaration
+    # so the cobaltstrike RF library receives the teamserver credentials.
+    # ------------------------------------------------------------------
+    script_content = request.script_content
+    if SCRIPT_BUILDER_AVAILABLE and (CS_IP or CS_PASS):
+        script_content = inject_cs_settings(
+            robot_script=script_content,
+            cs_ip=CS_IP or "",
+            cs_user=CS_USER,
+            cs_pass=CS_PASS or "",
+            cs_dir=str(cs_lib_src.parent) if cs_lib_src else CS_DIR,
+            cs_port=50050,
+            debug=bool(os.getenv("DEBUG_MODE", "")),
+        )
+        print(f"[terminal] CS credentials injected into library declaration")
+    elif not (CS_IP or CS_PASS):
+        print(f"[terminal] WARNING: CS_IP and CS_PASS not set — library will use defaults")
+
+    script_path.write_text(script_content)
 
     _terminal_sessions[session_id] = {
         "id": session_id, "script_path": str(script_path), "work_dir": str(work_dir),
         "status": "created", "created_at": datetime.now().isoformat(),
         "cs_library": str(cs_lib_src) if cs_lib_src else None,
+        "cs_credentials_injected": SCRIPT_BUILDER_AVAILABLE and bool(CS_IP or CS_PASS),
     }
     return {"session_id": session_id, "script_path": str(script_path), "work_dir": str(work_dir)}
 

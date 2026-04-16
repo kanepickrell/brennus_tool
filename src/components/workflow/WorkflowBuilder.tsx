@@ -28,7 +28,9 @@ import { Toolbar, ViewMode, LifecycleStage } from './Toolbar';
 import { ScriptView } from './ScriptView';
 import { SaveLoadDialog } from '../opfor/SaveLoadDialog';
 import { OpforNode } from './OpforNode';
-import { ExecutionPanel, useExecutionState } from './ExecutionPanel';
+// ── ExecutionPanel is now a forwardRef component exposing .execute()/.stop() ──
+import { ExecutionPanel } from './ExecutionPanel';
+import type { ExecutionPanelHandle } from './ExecutionPanel';
 import { OperatorHeader } from './OperatorHeader';
 import { JQRPanel } from './JQRPanel';
 import { CampaignStatusBar } from './CampaignStatusBar';
@@ -59,8 +61,11 @@ import {
   ConnectionContext,
 } from '@/services/nodeInstanceUtils';
 import {
-  simulateWorkflow,
+  // Real execution — no longer importing simulateWorkflow
   checkInfrastructureStatus,
+  type ExecutionState,
+  initialExecutionState,
+  makeLogLine,
 } from '@/services/executionService';
 import { generateRobotScript } from '@/services/robotScriptGenerator';
 import { GuidedVariation } from '@/data/guidedVariations';
@@ -106,12 +111,10 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     csPass:    '',
     csDir:     '/opt/cobaltstrike',
     csPort:    '50050',
-    // Operator environment — %{HOME} is Robot Framework env var syntax
+    // Operator environment
     workdir:    '%{HOME}/sandworm/',
     debugMode:  '${False}',
     sudoNeeded: '${False}',
-    // Note: ARTIFACT_DIR auto-generated as artifact/<campaign-slug>
-    // TARGET1, TARGET2, LOCAL_INITIAL_BEACON declared by their canvas nodes
   });
 
   // ── Seed globalSettings from campaign config on mount ──────────────────────
@@ -147,7 +150,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
   }, []); // run once on mount only
 
   // ── Rehydrate onToggleCollapse after campaign canvas restore ─────────────
-  // Serialized campaign nodes lose the function reference. Patch it back in.
   useEffect(() => {
     setNodes(nds => nds.map(n => {
       if (n.type !== 'phaseGroup') return n;
@@ -159,7 +161,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         },
       };
     }));
-  // Run once after mount — toggleCollapseRef is stable
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -191,7 +192,7 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     };
   }, [nodes, edges, campaign]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Tactic filter (driven by JQR panel "+" button) ────────────────────────
+  // ── Tactic filter ─────────────────────────────────────────────────────────
   const [tacticFilter, setTacticFilter] = useState<string | null>(null);
 
   // ── Readiness check modal ─────────────────────────────────────────────────
@@ -200,58 +201,137 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
 
-  // ============================================================================
-  // EXECUTION PANEL STATE
-  // ============================================================================
+  // ==========================================================================
+  // EXECUTION STATE
+  // ExecutionPanel owns the terminal WebSocket and all RF output.
+  // WorkflowBuilder only needs to know: is the panel open, and what's the
+  // last known execution state (for the header status dot + toolbar button).
+  // ==========================================================================
   const [executionPanelOpen, setExecutionPanelOpen] = useState(false);
+
+  // ── Execution state for header / toolbar display ──────────────────────────
+  // ExecutionPanel manages its own internal running state via TerminalView.
+  // We mirror the high-level status here so OperatorHeader and Toolbar can
+  // show a green/amber/red dot without needing direct terminal access.
+  const [executionState, setExecutionState] = useState<ExecutionState>(initialExecutionState);
+
+  // ── ref to the ExecutionPanel so we can call .execute() from the toolbar ──
+  const executionPanelRef = useRef<ExecutionPanelHandle>(null);
+
+  // ── InfrastructureState kept in sync with real backend ───────────────────
   const [infrastructureStatus, setInfrastructureStatus] = useState<InfrastructureState>({
-    c2Connected: false,
+    c2Connected:    false,
     robotAvailable: false,
-    listeners: [],
-    payloads: [],
+    listeners:      [],
+    payloads:       [],
   });
 
-  const {
-    state: executionState,
-    addLog,
-    startExecution,
-    setCurrentNode,
-    completeStep,
-    completeExecution,
-    stopExecution,
-    resetExecution,
-  } = useExecutionState();
-
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Check infrastructure on mount
+  // Poll every 8 s — lightweight GET, just status booleans
   useEffect(() => {
-    checkInfrastructureStatus()
-      .then(status => {
+    const poll = async () => {
+      try {
+        const s = await checkInfrastructureStatus('http://localhost:8001');
         setInfrastructureStatus({
-          c2Connected: status.c2Connected,
-          c2Host: status.c2Host,
-          c2Port: status.c2Port,
-          robotAvailable: status.robotAvailable,
-          robotVersion: status.robotVersion,
-          listeners: status.listeners,
-          payloads: status.payloads,
+          c2Connected:    s.c2Connected,
+          c2Host:         s.teamserverHost,
+          robotAvailable: s.robotAvailable,
+          listeners:      s.listeners,
+          payloads:       s.payloads,
         });
-      })
-      .catch(() => {
-        setInfrastructureStatus({
-          c2Connected: false,
-          robotAvailable: true,
-          robotVersion: 'Simulated',
-          listeners: [],
-          payloads: [],
-        });
-      });
+      } catch {
+        // Server unreachable — keep last known state, don't spam console
+      }
+    };
+    poll();
+    const id = setInterval(poll, 8000);
+    return () => clearInterval(id);
   }, []);
 
-  // ============================================================================
+  // ==========================================================================
+  // EXECUTION HANDLERS
+  // The Execute button / Ctrl+Enter calls handleRunExecution.
+  // That opens the panel and forwards the generated .robot script to
+  // executionPanelRef.current.execute() — which creates the terminal session
+  // (with CS credential injection) and opens the WebSocket stream.
+  // ==========================================================================
+
+  const handleRunExecution = useCallback(() => {
+    if (!generatedScript?.full) {
+      toast({
+        title: 'No script',
+        description: 'Add nodes to the canvas to generate a script.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setExecutionPanelOpen(true);
+    setExecutionState(prev => ({
+      ...prev,
+      status: 'running',
+      startedAt: new Date(),
+      completedAt: undefined,
+      logs: [...prev.logs, makeLogLine('info', `Executing: ${globalSettings.executionPlanName}`)],
+    }));
+
+    // Delegate everything to ExecutionPanel — it owns the WebSocket lifecycle.
+    // We use setTimeout(0) so the panel has a render cycle to mount TerminalView
+    // before we call into it.
+    setTimeout(() => {
+      executionPanelRef.current?.execute(generatedScript.full);
+    }, 0);
+  }, [generatedScript, globalSettings.executionPlanName, toast]);
+
+  const handleStopExecution = useCallback(() => {
+    executionPanelRef.current?.stop();
+    setExecutionState(prev => ({
+      ...prev,
+      status: 'stopped',
+      completedAt: new Date(),
+    }));
+  }, []);
+
+  const handleRerunExecution = useCallback(() => {
+    setExecutionState(initialExecutionState);
+    // Brief delay so state resets before execute fires
+    setTimeout(handleRunExecution, 50);
+  }, [handleRunExecution]);
+
+  // Mirror terminal exit code back up to WorkflowBuilder state
+  const handleExecutionComplete = useCallback((exitCode: number) => {
+    setExecutionState(prev => ({
+      ...prev,
+      status: exitCode === 0 ? 'completed' : 'failed',
+      completedAt: new Date(),
+      progress: exitCode === 0 ? 100 : prev.progress,
+      logs: [
+        ...prev.logs,
+        makeLogLine(
+          exitCode === 0 ? 'success' : 'error',
+          exitCode === 0
+            ? 'Robot Framework completed successfully'
+            : `Robot Framework exited with code ${exitCode}`,
+        ),
+      ],
+    }));
+
+    // Update node visual states from RF output
+    if (exitCode === 0) {
+      setNodes(nds =>
+        nds.map(n => ({
+          ...n,
+          data: {
+            ...n.data,
+            validationState: n.data?.validationState === 'executing' ? 'success' : n.data?.validationState,
+          },
+        }))
+      );
+    }
+  }, [setNodes]);
+
+  // ==========================================================================
   // NODE INSTANCES & CONNECTION CONTEXT
-  // ============================================================================
+  // ==========================================================================
   const nodeInstances = useMemo((): Map<string, NodeInstance> => {
     return buildNodeInstances(nodes);
   }, [nodes]);
@@ -264,9 +344,12 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     return new Map(nodes.map(n => [n.id, n]));
   }, [nodes]);
 
-  // ============================================================================
+  // ==========================================================================
   // GENERATED ROBOT SCRIPT
-  // ============================================================================
+  // Recomputed any time nodes/edges/settings change.
+  // Passed to ExecutionPanel as scriptContent — visible in Script tab and
+  // used by the Execute button.
+  // ==========================================================================
   const generatedScript = useMemo(() => {
     if (nodes.length === 0) return null;
     try {
@@ -279,9 +362,9 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     }
   }, [nodes, edges, globalSettings]);
 
-  // ============================================================================
+  // ==========================================================================
   // CANVAS VARIABLES
-  // ============================================================================
+  // ==========================================================================
   const availableVariables = useMemo((): Record<string, CanvasVariable> => {
     const vars: Record<string, CanvasVariable> = {};
 
@@ -358,7 +441,7 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     [globalSettings.operator]
   );
 
-  // Autosave every 30 seconds — syncs canvas state back to campaign record
+  // Autosave every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (nodes.length > 0) {
@@ -440,6 +523,23 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setNodes, setEdges, addLogEntry, toast]);
 
+  // ── Ctrl+Enter global shortcut — execute from anywhere ───────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key !== 'Enter') return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) return;
+      e.preventDefault();
+      handleRunExecution();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleRunExecution]);
+
   const handleNodeDataChange = useCallback(
     (nodeId: string, newData: OpforNodeData) => {
       setNodes(nds => nds.map(n => (n.id === nodeId ? { ...n, data: newData } : n)));
@@ -497,18 +597,9 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     [getViewport, setNodes, addLogEntry, toast, ensureSafeNodeDef]
   );
 
-  // ============================================================================
-  // PHASE GROUP COLLAPSE — updates nodes + edges atomically
-  //
-  // Strategy:
-  //   - Read the group's current state from the live `nodes` array (not stale
-  //     closure) to determine willCollapse and child IDs.
-  //   - setNodes: resize group, hide/show children.
-  //   - setEdges: hide child-level edges; group-level phase edges always visible.
-  //   - The group-level edge (phase-out → phase-in) is the visual connector
-  //     between pills. Child-level inter-lane edges are hidden when collapsed
-  //     since their endpoint nodes are hidden.
-  // ============================================================================
+  // ==========================================================================
+  // PHASE GROUP COLLAPSE
+  // ==========================================================================
   const handleToggleCollapse = useCallback((groupId: string) => {
     const group = nodes.find(n => n.id === groupId);
     if (!group) return;
@@ -519,7 +610,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     const newW = willCollapse ? PILL_W  : gData.expandedWidth;
     const newH = willCollapse ? PILL_H  : gData.expandedHeight + GROUP_HEADER_H + GROUP_PADDING;
 
-    // Update the group node dimensions and all child visibility
     setNodes(nds => nds.map(n => {
       if (n.id === groupId) {
         return {
@@ -536,15 +626,10 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
       return n;
     }));
 
-    // Hide/show child-to-child edges only.
-    // No inter-group edges exist in the card-stack design — the visual
-    // sequence is conveyed by proximity and ArrowConnector nodes.
     setEdges(eds => eds.map(e => {
       const srcIsChild = childIds.has(e.source);
       const tgtIsChild = childIds.has(e.target);
       if (srcIsChild || tgtIsChild) {
-        // Inter-lane edges (id starts with 'edge-inter-') are permanently hidden —
-        // they exist only for Robot script ordering, never rendered.
         if (e.id.startsWith('edge-inter-')) return e;
         return { ...e, hidden: willCollapse };
       }
@@ -552,12 +637,9 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     }));
   }, [nodes, setNodes, setEdges]);
 
-  // Stable ref so handleSelectVariation can embed it in node data
-  // without listing it as a dependency (it never changes identity after mount)
   const toggleCollapseRef = useRef(handleToggleCollapse);
   useEffect(() => { toggleCollapseRef.current = handleToggleCollapse; }, [handleToggleCollapse]);
 
-  // ── handleUpdateTag: merges tag editor patches back into a phaseGroup node ──
   const handleUpdateTag = useCallback((groupId: string, patch: TaggedGroupPatch) => {
     setNodes(nds => nds.map(n => {
       if (n.id !== groupId) return n;
@@ -565,11 +647,9 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     }));
   }, [setNodes]);
 
-  // Stable ref so it can be embedded in node data without stale closure issues
   const updateTagRef = useRef(handleUpdateTag);
   useEffect(() => { updateTagRef.current = handleUpdateTag; }, [handleUpdateTag]);
 
-  // ── handleContainerizeSelected: wraps shift-clicked nodes into operator group ──
   const handleContainerizeSelected = useCallback((selectedIds: string[]) => {
     setFramingMode(false);
 
@@ -593,7 +673,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     const maxY = Math.max(...contained.map(n => n.position.y + (n.height ?? 72)))  + pad;
 
     const expW = maxX - minX;
-    // expH = total inner height minus header — extra GROUP_PADDING gives bottom breathing room
     const expH = maxY - minY - OPERATOR_GROUP_HEADER_H + GROUP_PADDING;
 
     const childTtpIds = contained.flatMap(n => {
@@ -652,42 +731,18 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     addLogEntry('update', `Operator frame: ${contained.length} nodes containerized`, 'Set tactic, difficulty, and KSA/JQS in the container header');
   }, [nodes, setNodes, addLogEntry, toggleCollapseRef]);
 
-  // ============================================================================
-  // GUIDED VARIATION PLACEMENT — swim lanes + collapsible PhaseGroupNode
-  //
-  // Layout rules:
-  //   • Each variation gets its own swim lane (horizontal row).
-  //   • Rows stack vertically with dynamic spacing based on actual node height.
-  //   • A PhaseGroupNode wraps each row's opforNodes as a subflow container.
-  //   • An inter-phase edge connects the previous group's phase-out handle to
-  //     the new group's phase-in handle, keeping the chain visually continuous.
-  //   • Child opforNodes use parentId + extent:'parent' so they stay inside.
-  //
-  // Collapse behaviour (handled in PhaseGroupNode + here):
-  //   • Toggling collapse hides child nodes and resizes the group to PILL dims.
-  //   • The inter-phase edges stay attached to the group handles — chain intact.
-  //
-  // Definition resolution:
-  //   • GuidedView enriches each step with _resolvedDefinition (full API module).
-  //   • We prefer that over the stub built from guidedVariations.ts metadata.
-  //   • If a step's module key wasn't found in the library (lookup miss logged
-  //     by GuidedView), we fall back to the stub so the canvas still renders.
-  // ============================================================================
-
+  // ==========================================================================
+  // GUIDED VARIATION PLACEMENT
+  // ==========================================================================
   const handleSelectVariation = useCallback(
     (variation: GuidedVariation) => {
       const viewport = getViewport();
 
-      // ── Layout constants ─────────────────────────────────────────────────
-      const CHILD_NODE_W   = 160;   // opforNode width inside group
-      const CHILD_NODE_H   = 72;    // opforNode height inside group
-      const CHILD_GAP_X    = 40;    // gap between child nodes
-      const LANE_GAP_Y     = 48;    // vertical gap between swim lanes
-      const INTER_PHASE_DY = 32;    // diagonal drop for inter-phase connector
+      const CHILD_NODE_W   = 160;
+      const CHILD_NODE_H   = 72;
+      const CHILD_GAP_X    = 40;
+      const LANE_GAP_Y     = 48;
 
-      // ── Find existing phase group tail ───────────────────────────────────
-      // Look for the bottommost phaseGroup node (highest y) — that's the
-      // previous lane. The new lane goes below it.
       const currentNodes = nodes;
       const currentEdges = edges;
 
@@ -696,9 +751,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         ? existingGroups.reduce((b, n) => n.position.y > b.position.y ? n : b, existingGroups[0])
         : null;
 
-      // Find the previous lane's tail opforNode (rightmost child) so we can
-      // also wire a plain edge between the last child and the first child of
-      // this new lane, in addition to the group-level inter-phase edge.
       const nodesWithOutgoing = new Set(currentEdges.map(e => e.source));
       const orphanTails = currentNodes.filter(n =>
         n.type === 'opforNode' &&
@@ -709,7 +761,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         ? orphanTails.reduce((b, n) => n.position.x > b.position.x ? n : b, orphanTails[0])
         : null;
 
-      // ── Determine group start position (swim lane) ───────────────────────
       let groupX: number;
       let groupY: number;
 
@@ -721,29 +772,23 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         groupX = tailGroup.position.x;
         groupY = tailGroup.position.y + tgH + LANE_GAP_Y;
       } else {
-        // Empty canvas — anchor to visible center
         groupX = -viewport.x / viewport.zoom + 60;
         groupY = -viewport.y / viewport.zoom + 80;
       }
 
-      // ── Compute group dimensions from step count ─────────────────────────
       const n          = variation.steps.length;
       const expandedW  = n * CHILD_NODE_W + (n - 1) * CHILD_GAP_X + GROUP_PADDING * 2;
       const expandedH  = CHILD_NODE_H + GROUP_PADDING * 2;
       const totalH     = expandedH + GROUP_HEADER_H + GROUP_PADDING;
 
-      // ── IDs ──────────────────────────────────────────────────────────────
       const ts       = Date.now();
       const groupId  = `phase-group-${variation.phaseId}-${ts}`;
       const childIds = variation.steps.map((s, i) => `${s.moduleKey}-${ts}-${i}`);
 
-      // ── Build the PhaseGroupNode ─────────────────────────────────────────
       const groupNode: Node = {
         id:       groupId,
         type:     'phaseGroup',
         position: { x: groupX, y: groupY },
-        // width/height + style must both be set — ReactFlow uses style for
-        // handle position math when the node has explicit dimensions
         width:    expandedW,
         height:   totalH,
         style:    { width: expandedW, height: totalH },
@@ -764,49 +809,25 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         draggable:  true,
       };
 
-      // ── Build child opforNodes (parentId = groupId) ──────────────────────
-      //
-      // RESOLUTION ORDER:
-      //   1. _resolvedDefinition attached by GuidedView.handleSelect — this is
-      //      a full OpforNodeDefinition built via buildNodeDefinition() from the
-      //      live API module, identical to what Browse drag-and-drop produces.
-      //      It carries parameters, inputs, outputs, cobaltStrikeCommand,
-      //      robotKeyword, robotFramework, shellCommand, etc.
-      //   2. Stub fallback — used only when GuidedView couldn't find the module
-      //      key in the loaded library (lookup miss). Provides a minimal but
-      //      renderable definition so the canvas doesn't break.
-      const childNodes: Node[] = variation.steps.map((step, index) => {
-        // Pull the full definition that GuidedView resolved from the API.
-        const resolved = (step as any)._resolvedDefinition as OpforNodeDefinition | undefined;
+      const withTriggerHandles = (def: OpforNodeDefinition): OpforNodeDefinition => {
+        const TRIGGER_IN  = { id: 'trigger-in',  label: 'Trigger', type: 'trigger', required: true,  description: '' };
+        const TRIGGER_OUT = { id: 'trigger-out', label: 'Next',    type: 'trigger', required: false, description: '' };
+        const inputs  = [TRIGGER_IN,  ...(def.inputs  || []).filter(p => p.id !== 'trigger-in')];
+        const outputs = [TRIGGER_OUT, ...(def.outputs || []).filter(p => p.id !== 'trigger-out')];
+        return { ...def, inputs, outputs };
+      };
 
-        // Guided swim-lane chains are always wired via trigger-in / trigger-out handles.
-        // The resolved definition carries real semantic ports (e.g. "session", "beacon")
-        // which are correct for the properties panel and script generator, but those
-        // handle IDs don't match the edges we build below.  We guarantee the two
-        // trigger handles exist by prepending them, deduplicating by id so we never
-        // add them twice if the module already defines them.
-        const withTriggerHandles = (def: OpforNodeDefinition): OpforNodeDefinition => {
-          const TRIGGER_IN  = { id: 'trigger-in',  label: 'Trigger', type: 'trigger', required: true,  description: '' };
-          const TRIGGER_OUT = { id: 'trigger-out', label: 'Next',    type: 'trigger', required: false, description: '' };
-          const inputs  = [TRIGGER_IN,  ...(def.inputs  || []).filter(p => p.id !== 'trigger-in')];
-          const outputs = [TRIGGER_OUT, ...(def.outputs || []).filter(p => p.id !== 'trigger-out')];
-          return { ...def, inputs, outputs };
-        };
+      const childNodes: Node[] = variation.steps.map((step, index) => {
+        const resolved = (step as any)._resolvedDefinition as OpforNodeDefinition | undefined;
 
         const definition: OpforNodeDefinition = resolved
           ? {
-              // Full API definition — keep everything, just overlay MITRE context
-              // so it stays in sync with what the operator tagged in guidedVariations.ts.
-              // withTriggerHandles ensures the swim-lane edges always have a valid target.
               ...withTriggerHandles(ensureSafeNodeDef(resolved)),
               mitre: { tacticId: step.tactic, techniqueId: step.ttpId },
             }
           : {
-              // Fallback stub: only reachable when module key wasn't found in library.
-              // Log a warning so the developer knows which key to add/fix.
               ...(console.warn(
-                `[handleSelectVariation] No resolved definition for "${step.moduleKey}" — ` +
-                `using stub. Check that this key exists in the API library.`
+                `[handleSelectVariation] No resolved definition for "${step.moduleKey}" — using stub.`
               ), {}),
               id:                  step.moduleKey,
               _key:                step.moduleKey,
@@ -833,8 +854,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
               mitre: { tacticId: step.tactic, techniqueId: step.ttpId },
             };
 
-        // Seed parameter map with defaults from the resolved definition,
-        // matching the behaviour of Browse drag-and-drop (onDrop handler).
         const initialParams: Record<string, string | number> = {};
         definition.parameters?.forEach(param => {
           if (param.default !== undefined) initialParams[param.id] = param.default;
@@ -846,7 +865,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
           parentId: groupId,
           extent:   'parent' as const,
           position: {
-            // Positions are relative to the group node's top-left
             x: GROUP_PADDING + index * (CHILD_NODE_W + CHILD_GAP_X),
             y: GROUP_HEADER_H + GROUP_PADDING,
           },
@@ -859,10 +877,8 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         };
       });
 
-      // ── Build edges ──────────────────────────────────────────────────────
       const newEdges: Edge[] = [];
 
-      // Within-lane edges (child to child)
       childIds.forEach((id, i) => {
         if (i === 0) return;
         newEdges.push({
@@ -876,9 +892,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         });
       });
 
-      // Inter-lane edge: last child of previous lane → first child of this lane.
-      // Kept hidden always — exists purely for Robot script chain ordering.
-      // The ArrowConnector node handles the visual sequence indication.
       if (prevTailOpfor) {
         newEdges.push({
           id:           `edge-inter-${prevTailOpfor.id}-${childIds[0]}`,
@@ -893,9 +906,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         });
       }
 
-      // ── Inter-lane sequence arrow ────────────────────────────────────────
-      // A tiny ArrowConnector node sits in the gap between this group and the
-      // previous. Purely decorative — no handles, no edges needed.
       const extraNodes: Node[] = [];
       if (tailGroup) {
         const tgData = tailGroup.data as PhaseGroupData;
@@ -917,8 +927,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         });
       }
 
-      // ── Commit to canvas ─────────────────────────────────────────────────
-      // Group node must be added BEFORE children so ReactFlow knows the parent exists
       setNodes(nds => [...nds, groupNode, ...extraNodes, ...childNodes]);
       setEdges(eds => [...eds, ...newEdges]);
 
@@ -967,8 +975,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  // onDrop is async — fetches full payload JSON before placing the node
-  // so the robotFramework config is available to the script generator immediately.
   const onDrop = useCallback(
     async (event: React.DragEvent) => {
       event.preventDefault();
@@ -982,12 +988,10 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         return;
       }
 
-      // Fetch full payload to get robotFramework config before placing node
       const moduleKey = nodeDef._key || nodeDef.id;
       try {
         const payload = await libraryModuleService.getModulePayload(moduleKey);
         if (payload) {
-          // Merge payload into nodeDef — payload wins on conflicts, keys preserved
           nodeDef = { ...nodeDef, ...payload, _key: nodeDef._key, id: nodeDef.id };
         }
       } catch (e) {
@@ -1017,7 +1021,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
       setNodes(nds => [...nds, newNode]);
       addLogEntry('update', `Added: ${safeNodeDef.name}`, safeNodeDef.description, newNode.id);
 
-      // Only center on the FIRST node drop
       if (!hasInitialNode.current) {
         hasInitialNode.current = true;
         setTimeout(() => fitView({ padding: 0.3 }), 50);
@@ -1090,105 +1093,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     toast({ title: '✅ Chain Valid', description: `${nodes.length} TTPs validated` });
   }, [nodes, edges, toast, addLogEntry, setNodes]);
 
-  // ============================================================================
-  // EXECUTION HANDLERS
-  // ============================================================================
-  const updateNodeState = useCallback(
-    (nodeId: string, state: 'executing' | 'success' | 'failed' | 'validated') => {
-      setNodes(nds =>
-        nds.map(n =>
-          n.id === nodeId ? { ...n, data: { ...n.data, validationState: state } } : n
-        )
-      );
-    },
-    [setNodes]
-  );
-
-  const handleRunExecution = useCallback(async () => {
-    const connectedNodeIds = new Set<string>();
-    edges.forEach(e => {
-      connectedNodeIds.add(e.source);
-      connectedNodeIds.add(e.target);
-    });
-    const connectedNodes = nodes.filter(n => connectedNodeIds.has(n.id));
-
-    if (connectedNodes.length === 0) {
-      toast({
-        title: 'No connected nodes',
-        description: 'Connect nodes before running',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setExecutionPanelOpen(true);
-    startExecution(connectedNodes.length);
-    abortControllerRef.current = new AbortController();
-
-    const success = await simulateWorkflow(
-      nodes as Node<OpforNodeData>[],
-      edges,
-      {
-        apiBaseUrl: 'http://localhost:8001',
-        globalSettings: {
-          csIp: globalSettings.c2Server || '10.50.100.5',
-          csPort: 50050,
-          csUser: globalSettings.operator || 'operator',
-          csPassword: 'password',
-          csDir: '/opt/cobaltstrike',
-        },
-      },
-      {
-        onLog: addLog,
-        onNodeStart: (nodeId, nodeName) => {
-          setCurrentNode(nodeId, nodeName);
-          updateNodeState(nodeId, 'executing');
-        },
-        onNodeComplete: (nodeId, nodeName, success, message) => {
-          completeStep(nodeId, nodeName, success, message);
-          updateNodeState(nodeId, success ? 'success' : 'failed');
-        },
-        onInfrastructureUpdate: status =>
-          setInfrastructureStatus({
-            c2Connected: status.c2Connected,
-            c2Host: status.c2Host,
-            c2Port: status.c2Port,
-            robotAvailable: status.robotAvailable,
-            robotVersion: status.robotVersion,
-            listeners: status.listeners,
-            payloads: status.payloads,
-          }),
-      },
-      abortControllerRef.current.signal
-    );
-
-    completeExecution(success);
-  }, [
-    nodes,
-    edges,
-    globalSettings,
-    startExecution,
-    addLog,
-    setCurrentNode,
-    completeStep,
-    completeExecution,
-    updateNodeState,
-    toast,
-  ]);
-
-  const handleStopExecution = useCallback(() => {
-    abortControllerRef.current?.abort();
-    stopExecution();
-  }, [stopExecution]);
-
-  const handleRerunExecution = useCallback(() => {
-    setNodes(nds =>
-      nds.map(n => ({ ...n, data: { ...n.data, validationState: 'validated' } }))
-    );
-    resetExecution();
-    handleRunExecution();
-  }, [resetExecution, handleRunExecution, setNodes]);
-
   const handleHighlightNode = useCallback(
     (nodeId: string | null) => {
       setNodes(nds => nds.map(n => ({ ...n, selected: n.id === nodeId })));
@@ -1198,7 +1102,7 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
 
   const handleSimulate = useCallback(() => handleRunExecution(), [handleRunExecution]);
 
-  // ── Export — gates through readiness check ────────────────────────────────
+  // ── Export ────────────────────────────────────────────────────────────────
   const handleExport = useCallback(() => {
     setShowReadiness(true);
   }, []);
@@ -1221,18 +1125,17 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     setNodes([]);
     setEdges([]);
     setSelectedNode(null);
-    resetExecution();
+    setExecutionState(initialExecutionState);
     hasInitialNode.current = false;
     setInfrastructureStatus({
       c2Connected: false,
-      robotAvailable: true,
-      robotVersion: 'Simulated',
+      robotAvailable: false,
       listeners: [],
       payloads: [],
     });
     addLogEntry('update', 'Canvas reset');
     toast({ title: 'Canvas Reset' });
-  }, [setNodes, setEdges, addLogEntry, toast, resetExecution]);
+  }, [setNodes, setEdges, addLogEntry, toast]);
 
   const handleLoadWorkflow = useCallback(
     (workflow: WorkflowFile) => {
@@ -1257,7 +1160,7 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
 
   const panelNodes = useMemo(
     () => nodes
-      .filter(n => n.type === 'opforNode') // exclude PhaseGroupNodes and ArrowConnectorNodes
+      .filter(n => n.type === 'opforNode')
       .map(n => ({ id: n.id, data: n.data as OpforNodeData })),
     [nodes]
   );
@@ -1270,7 +1173,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
     [selectedNode]
   );
 
-  // Count operator-tagged groups that are ready to publish
   const taggedGroupCount = nodes.filter(n =>
     n.type === 'phaseGroup' &&
     (n.data as { source?: string; contributionStatus?: string }).source === 'operator' &&
@@ -1279,13 +1181,12 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
 
   const isScriptView = viewMode === 'script';
 
-  // ============================================================================
+  // ==========================================================================
   // RENDER
-  // ============================================================================
+  // ==========================================================================
   return (
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
 
-      {/* ── LUMEN Header ── */}
       <OperatorHeader
         infrastructureStatus={infrastructureStatus}
         globalSettings={globalSettings}
@@ -1332,7 +1233,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
               <ScriptView nodes={nodes} edges={edges} globalSettings={globalSettings} />
             </div>
 
-            {/* Right panel with JQR panel above */}
             <div className="flex flex-col flex-shrink-0" style={{ width: 'auto' }}>
               <CampaignStatusBar
                 lifecycleStage={lifecycleStage}
@@ -1446,7 +1346,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
               </ReactFlow>
             </div>
 
-            {/* Right panel with JQR panel above properties */}
             <div className="flex flex-col flex-shrink-0" style={{ width: 'auto' }}>
               <CampaignStatusBar
                 lifecycleStage={lifecycleStage}
@@ -1480,7 +1379,9 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         )}
       </div>
 
+      {/* ── Execution Panel — real terminal, forwardRef for .execute()/.stop() ── */}
       <ExecutionPanel
+        ref={executionPanelRef}
         isOpen={executionPanelOpen}
         onToggle={() => setExecutionPanelOpen(!executionPanelOpen)}
         onClose={() => setExecutionPanelOpen(false)}
@@ -1489,7 +1390,7 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         onStop={handleStopExecution}
         onRerun={handleRerunExecution}
         onHighlightNode={handleHighlightNode}
-        scriptContent={generatedScript?.full}
+        scriptContent={generatedScript?.full ?? ''}
         apiBaseUrl="http://localhost:8001"
       />
 
@@ -1506,7 +1407,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
         onLoad={handleLoadWorkflow}
       />
 
-      {/* ── Readiness check modal — gates export ── */}
       {showReadiness && (
         <ReadinessCheck
           nodes={nodes}
