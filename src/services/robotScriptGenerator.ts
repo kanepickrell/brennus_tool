@@ -7,20 +7,17 @@
 
 import { Node, Edge } from '@xyflow/react';
 import { OpforNodeData, OpforGlobalSettings } from '@/types/opfor';
+import {
+  resolveVariableReference,
+  buildConnectionContext,
+  type ConnectionContext,
+} from './variableResolution';
+import {
+  targetFieldVariableName,
+} from '../data/rangeTargets';
+import type { RangeTargetData } from '../types/opforRangeTarget';
 
 // ── Static library map ────────────────────────────────────────────────────────
-// Maps each module _key to the Robot Framework Library imports it needs.
-// This is the source-of-truth fallback used when a node's robotFramework.libraries
-// is empty (e.g. the node was placed before the updated payload JSON was deployed).
-//
-// Rules:
-//   - cobaltstrikec2/cobaltstrike.py is needed by every CS module.
-//   - SSHLibrary + SCPLibrary are ONLY needed by cs-initial-access (SCP delivery).
-//   - Process, OperatingSystem, Collections, DateTime, String, CSVLibrary,
-//     LogLibrary.py are internal to the cobaltstrike.py library itself —
-//     they do NOT need to be imported at the .robot level.
-//   - Add new module keys here whenever a new payload JSON is created.
-// ─────────────────────────────────────────────────────────────────────────────
 const MODULE_LIBRARIES: Record<string, string[]> = {
   'cs-start-c2':              ['cobaltstrikec2/cobaltstrike.py'],
   'cs-stop-c2':               ['cobaltstrikec2/cobaltstrike.py'],
@@ -61,15 +58,6 @@ const MODULE_LIBRARIES: Record<string, string[]> = {
   'ph-launch-attack':     ['phishing/PhishingLibrary.py', 'phishing/HTTPLibrary.py'],
 };
 
-// ── Static library init args fallback ────────────────────────────────────────
-// When cs-start-c2 is on canvas its libraryArgs are used to emit init params
-// on the Library import line. This static map is the Tier 3 fallback for stale
-// canvas nodes that predate the libraryArgs field in the JSON.
-//
-// Maps library path → ordered init arg definitions.
-// paramName: the Python __init__ kwarg name
-// globalSetting: key into OpforGlobalSettings via getGlobalSetting()
-// ─────────────────────────────────────────────────────────────────────────────
 interface StaticLibraryArg {
   paramName: string;
   globalSetting: string;
@@ -86,17 +74,6 @@ const MODULE_LIBRARY_INIT_ARGS: Record<string, StaticLibraryArg[]> = {
   ],
 };
 
-// ── Static suite-variable fallback map ───────────────────────────────────────
-// Mirrors the robotFramework.variables[] arrays in each payload JSON.
-// Used as a Tier 3 fallback when a node was placed on canvas BEFORE the current
-// payload JSON was deployed (stale baked-in definition). The generator merges
-// these defaults into the node's variable block when the node's own variables
-// array is empty or missing the key.
-//
-// Entry format:  moduleKey → [ { name, fromParam?, default? } ]
-// fromParam: read from node.parameters[fromParam] at generation time
-// default:   hardcoded fallback value
-// ─────────────────────────────────────────────────────────────────────────────
 interface StaticVarDef { name: string; fromParam?: string; default?: string; scope: 'suite' }
 const MODULE_SUITE_VARS: Record<string, StaticVarDef[]> = {
   'cs-create-listener': [
@@ -127,9 +104,6 @@ const MODULE_SUITE_VARS: Record<string, StaticVarDef[]> = {
   ],
 };
 
-/**
- * Generated Robot Framework script sections
- */
 export interface RobotScript {
   settings: string;
   variables: string;
@@ -155,29 +129,14 @@ interface KeywordArg {
   variableName?: string;
   sessionVariable?: string;
   fromInput?: string;
-  /** If true, emit as named arg: argName=${VALUE} */
   named?: boolean;
-  /** The named arg label, e.g. "ip" → "ip=${CS_IP}" */
   argName?: string;
 }
 
-/**
- * Library init arg — passed to the Python library __init__ via the
- * Library import line in *** Settings ***, NOT to the keyword call.
- *
- * Example output:
- *   Library    cobaltstrikec2/cobaltstrike.py
- *   ...        local_bind_ip=${CS_IP}
- *   ...        user=${CS_USER}
- */
 interface LibraryArg {
-  /** Python __init__ parameter name, e.g. "local_bind_ip" */
   paramName: string;
-  /** Key into OpforGlobalSettings via getGlobalSetting(), e.g. "CS_IP" */
   globalSetting?: string;
-  /** Literal static value if not from globalSettings */
   staticValue?: string;
-  /** Ordering */
   position: number;
 }
 
@@ -195,21 +154,13 @@ interface RobotFrameworkConfig {
   resources?: string[];
   keyword: string;
   keywordArgs?: KeywordArg[];
-  /**
-   * Init args passed to the Library import line — used by cs-start-c2 to
-   * configure the cobaltstrike.py __init__ with connection details.
-   * These are emitted in *** Settings *** on the Library line, never in
-   * the test body keyword call.
-   */
   libraryArgs?: LibraryArg[];
   variables?: VariableDefinition[];
   preKeywordLog?: string;
   postKeywordLog?: string;
   captureOutput?: string;
   isTeardown?: boolean;
-  /** Node is a Suite Setup — emitted in Settings, skipped in test body */
   isSuiteSetup?: boolean;
-  /** Node is a Suite Teardown — emitted in Settings, skipped in test body */
   isSuiteTeardown?: boolean;
   preKeywordStatements?: string[];
   postKeywordStatements?: string[];
@@ -222,11 +173,6 @@ interface NodeInstance {
   instanceIndex: number;
   moduleId: string;
   variablePrefix: string;
-}
-
-interface ConnectionContext {
-  inputSources: Map<string, Map<string, string>>;
-  outputTargets: Map<string, Map<string, string[]>>;
 }
 
 interface SessionContext {
@@ -243,30 +189,6 @@ function getConnectedNodes(nodes: Node[], edges: Edge[]): Set<string> {
     connectedIds.add(edge.target);
   });
   return connectedIds;
-}
-
-function buildConnectionContext(edges: Edge[]): ConnectionContext {
-  const inputSources = new Map<string, Map<string, string>>();
-  const outputTargets = new Map<string, Map<string, string[]>>();
-
-  edges.forEach(edge => {
-    if (!inputSources.has(edge.target)) {
-      inputSources.set(edge.target, new Map());
-    }
-    const targetInputHandle = edge.targetHandle || 'default';
-    inputSources.get(edge.target)!.set(targetInputHandle, edge.source);
-
-    if (!outputTargets.has(edge.source)) {
-      outputTargets.set(edge.source, new Map());
-    }
-    const sourceOutputHandle = edge.sourceHandle || 'default';
-    if (!outputTargets.get(edge.source)!.has(sourceOutputHandle)) {
-      outputTargets.get(edge.source)!.set(sourceOutputHandle, []);
-    }
-    outputTargets.get(edge.source)!.get(sourceOutputHandle)!.push(edge.target);
-  });
-
-  return { inputSources, outputTargets };
 }
 
 function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
@@ -357,7 +279,6 @@ function getParameterValue(
 }
 
 function getGlobalSetting(key: string, globalSettings: OpforGlobalSettings): string {
-  // ARTIFACT_DIR uses the same slug logic as generateVariables
   const campaignSlug = (globalSettings.executionPlanName || 'campaign')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
@@ -377,48 +298,6 @@ function getGlobalSetting(key: string, globalSettings: OpforGlobalSettings): str
   return mapping[key] ?? '';
 }
 
-function resolveVariableReference(
-  varRef: string,
-  currentNodeId: string,
-  connectionContext: ConnectionContext,
-  nodeInstances: Map<string, NodeInstance>,
-  nodeMap: Map<string, Node>
-): string {
-  if (!varRef.startsWith('${') || !varRef.endsWith('}')) {
-    return varRef;
-  }
-
-  const baseVarName = varRef.slice(2, -1);
-  const varCategory = baseVarName.split('_')[0];
-
-  const inputSources = connectionContext.inputSources.get(currentNodeId);
-  if (!inputSources) return varRef;
-
-  for (const [_inputId, sourceNodeId] of inputSources) {
-    const sourceNode = nodeMap.get(sourceNodeId);
-    if (!sourceNode) continue;
-
-    const sourceData = sourceNode.data as OpforNodeData;
-    const sourceRobotConfig = sourceData.definition.robotFramework as RobotFrameworkConfig | undefined;
-    if (!sourceRobotConfig?.variables) continue;
-
-    const matchingVar = sourceRobotConfig.variables.find(v => {
-      const vCategory = v.name.split('_')[0];
-      return vCategory === varCategory;
-    });
-
-    if (matchingVar) {
-      const sourceInstance = nodeInstances.get(sourceNodeId);
-      if (sourceInstance) {
-        const instanceVarName = getInstanceVariableName(baseVarName, sourceInstance.variablePrefix);
-        return `\${${instanceVarName}}`;
-      }
-    }
-  }
-
-  return varRef;
-}
-
 function substituteStatementVariables(
   statement: string,
   instance: NodeInstance,
@@ -427,8 +306,6 @@ function substituteStatementVariables(
 ): string {
   let result = statement;
 
-  // Build merged variable list: robotConfig.variables + MODULE_SUITE_VARS fallback
-  // This ensures log strings work even for stale canvas nodes with empty variables arrays.
   const moduleId = (instance.node.data as OpforNodeData).definition;
   const moduleKey = (moduleId as any)._key || (moduleId as any).id || '';
   const staticVarDefs = MODULE_SUITE_VARS[moduleKey] ?? [];
@@ -452,8 +329,6 @@ function substituteStatementVariables(
     }
   });
 
-  // Legacy variable name remaps — stale canvas nodes may have old names baked
-  // into preKeywordLog strings. Remap them to their current canonical names.
   const LEGACY_VAR_RENAMES: Record<string, string> = {
     'PERSISTENCE_KEY': 'RUN_KEY',
     'PAYLOAD_NAME':    'HTTP_PAYLOAD_NAME',
@@ -481,10 +356,6 @@ function substituteStatementVariables(
   return result;
 }
 
-/**
- * Build the Suite Setup or Suite Teardown line + continuation args.
- * Named args are emitted as:  ...    argName=${VALUE}
- */
 function buildSuiteLifecycleLine(
   prefix: 'Suite Setup' | 'Suite Teardown',
   keyword: string,
@@ -538,31 +409,22 @@ function generateSettings(
   let suiteSetupNode: Node | null = null;
   let suiteTeardownNode: Node | null = null;
 
-  // ── Collect library init args (libraryArgs) ───────────────────────────────
-  // Maps library path → ordered init arg list.
-  // Only the first node that contributes libraryArgs for a given library wins —
-  // in practice only cs-start-c2 provides these for cobaltstrike.py.
-  //
-  // Three-tier resolution per node:
-  //   Tier 1: robotConfig.libraryArgs[] from current payload JSON
-  //   Tier 2: MODULE_LIBRARY_INIT_ARGS static map keyed by module _key
-  //   Tier 3: nothing (library imported without init args — functional but
-  //           library won't know connection details until Start C2 is called,
-  //           which is fine for libraries that configure lazily)
   const libraryInitArgs = new Map<string, Array<{ paramName: string; value: string }>>();
 
   allNodes.forEach(node => {
     const data = node.data as OpforNodeData;
-    const robotConfig = data.definition.robotFramework as RobotFrameworkConfig | undefined;
+    const robotConfig = data.definition?.robotFramework as RobotFrameworkConfig | undefined;
 
     if (!robotConfig) {
-      warnings.push(`Node "${data.definition.name}" missing robotFramework config`);
+      // Range target nodes don't have robotFramework config, skip warning
+      if (node.type !== 'rangeTargetNode') {
+        warnings.push(`Node "${data.definition?.name || node.id}" missing robotFramework config`);
+      }
       return;
     }
 
     const moduleKey: string = (data.definition as any)._key || data.definition.id || '';
 
-    // ── Collect Library imports — three-tier resolution ───────────────────
     const rfLibs: string[] = robotConfig.libraries ?? [];
     const reqLibs: string[] = (
       (data.definition.requirements as any)?.libraries ?? []
@@ -576,16 +438,12 @@ function generateSettings(
 
     nodeLibraries.forEach(lib => libraries.add(lib));
 
-    // Resource imports
     if (robotConfig.resources) {
       robotConfig.resources
         .filter(r => r !== 'hunt_1.resource')
         .forEach(r => resources.add(r));
     }
 
-    // ── Collect library init args ─────────────────────────────────────────
-    // Tier 1: from robotConfig.libraryArgs in current payload JSON
-    // Tier 2: from MODULE_LIBRARY_INIT_ARGS static fallback
     const jsonLibraryArgs: LibraryArg[] = robotConfig.libraryArgs ?? [];
     const staticLibraryArgs: StaticLibraryArg[] = MODULE_LIBRARY_INIT_ARGS[moduleKey] ?? [];
 
@@ -594,7 +452,6 @@ function generateSettings(
 
     if (resolvedLibraryArgs.length > 0) {
       nodeLibraries.forEach(lib => {
-        // Only set init args once per library — first node wins
         if (!libraryInitArgs.has(lib)) {
           const args = [...resolvedLibraryArgs]
             .sort((a, b) => a.position - b.position)
@@ -625,14 +482,9 @@ function generateSettings(
     '',
   ];
 
-  // ── Library imports ───────────────────────────────────────────────────────
-  // Sort for deterministic output. cobaltstrikec2/cobaltstrike.py will sort
-  // before SSHLibrary and SCPLibrary alphabetically, which is the correct order
-  // (main library must be imported before helpers that depend on it).
   Array.from(libraries).sort().forEach(lib => {
     const initArgs = libraryInitArgs.get(lib);
     if (initArgs && initArgs.length > 0) {
-      // Library with named init args — emit as multi-line continuation
       lines.push(`Library             ${lib}`);
       initArgs.forEach(arg => {
         lines.push(`...                 ${arg.paramName}=\${${arg.value.slice(2, -1)}}`);
@@ -642,7 +494,6 @@ function generateSettings(
     }
   });
 
-  // Resources
   if (resources.size > 0) {
     if (libraries.size > 0) lines.push('');
     Array.from(resources).sort().forEach(res => {
@@ -650,7 +501,6 @@ function generateSettings(
     });
   }
 
-  // Suite Setup
   if (suiteSetupNode) {
     const data = (suiteSetupNode as Node).data as OpforNodeData;
     const rc = data.definition.robotFramework as RobotFrameworkConfig;
@@ -664,7 +514,6 @@ function generateSettings(
     lines.push(...setupLines);
   }
 
-  // Suite Teardown
   if (suiteTeardownNode) {
     const data = (suiteTeardownNode as Node).data as OpforNodeData;
     const rc = data.definition.robotFramework as RobotFrameworkConfig;
@@ -690,7 +539,31 @@ function generateVariables(
 ): string {
   const lines: string[] = ['*** Variables ***'];
 
-  // ── C2 Infrastructure Variables ───────────────────────────────────────────
+  // Emit range target variables as suite-level Robot variables.
+  const targetNodes = allNodes.filter(
+    (n): n is Node & { data: RangeTargetData } => n.type === 'rangeTargetNode',
+  );
+
+  if (targetNodes.length > 0) {
+    lines.push('');
+    lines.push('# ─── Range Design Targets ───');
+    for (const t of targetNodes) {
+      const td = t.data;
+      if (!td.name) continue;
+      lines.push(`# ${td.icon}  ${td.name}  (${td.kind})`);
+
+      for (const field of Object.values(td.fields)) {
+        if (!field.value) continue;
+        // Sensitive fields in env mode are NOT emitted — the reference uses %{}
+        if (field.sensitive && field.emitMode === 'env') continue;
+
+        const varName = targetFieldVariableName(td.name, field.id);
+        lines.push(`\${${varName}}\t${field.value}`);
+      }
+      lines.push('');
+    }
+  }
+
   const c2Vars: Array<{ name: string; value: string }> = [];
 
   if (globalSettings.workdir)    c2Vars.push({ name: 'WORKDIR',  value: globalSettings.workdir });
@@ -710,8 +583,8 @@ function generateVariables(
   c2Vars.push({ name: 'SUDO_NEEDED',  value: globalSettings.sudoNeeded ?? '${False}' });
 
   const payloadNode = allNodes.find(n =>
-    ((n.data as OpforNodeData).definition as any)._key === 'cs-generate-payload' ||
-    (n.data as OpforNodeData).definition.id === 'cs-generate-payload'
+    ((n.data as OpforNodeData).definition as any)?._key === 'cs-generate-payload' ||
+    (n.data as OpforNodeData).definition?.id === 'cs-generate-payload'
   );
   const payloadName = payloadNode
     ? ((payloadNode.data as OpforNodeData).parameters?.payloadName ?? 'update')
@@ -726,15 +599,14 @@ function generateVariables(
     });
   }
 
-  // Per-node variable blocks
   const nodeVariableBlocks: Array<{ label: string; vars: Array<{ name: string; value: string | number }> }> = [];
 
   allNodes.forEach(node => {
     const data = node.data as OpforNodeData;
-    const robotConfig = data.definition.robotFramework as RobotFrameworkConfig | undefined;
+    const robotConfig = data.definition?.robotFramework as RobotFrameworkConfig | undefined;
     const instance = nodeInstances.get(node.id);
 
-    if (!instance) return;
+    if (!instance || !data.definition) return;
 
     const blockVars: Array<{ name: string; value: string | number }> = [];
 
@@ -796,6 +668,7 @@ function generateVariables(
 
 function generateTestCases(
   connectedNodes: Node[],
+  allNodes: Node[],
   nodeInstances: Map<string, NodeInstance>,
   connectionContext: ConnectionContext,
   nodeMap: Map<string, Node>,
@@ -830,7 +703,6 @@ function generateTestCases(
 
     if (!robotConfig || !instance) return;
 
-    // Suite setup/teardown nodes don't go in the test body
     if (robotConfig.isSuiteSetup || robotConfig.isSuiteTeardown) return;
 
     if (robotConfig.isTeardown) {
@@ -838,7 +710,6 @@ function generateTestCases(
       return;
     }
 
-    // Pre-keyword log
     if (robotConfig.preKeywordLog) {
       const logMsg = substituteStatementVariables(
         robotConfig.preKeywordLog, instance, robotConfig, sessionContext
@@ -846,7 +717,6 @@ function generateTestCases(
       lines.push(`    Log To Console    \\n${logMsg}`);
     }
 
-    // Pre-keyword statements
     if (robotConfig.preKeywordStatements?.length) {
       robotConfig.preKeywordStatements.forEach(stmt => {
         const resolvedStmt = substituteStatementVariables(stmt, instance, robotConfig, sessionContext);
@@ -854,7 +724,6 @@ function generateTestCases(
       });
     }
 
-    // Keyword call line
     const hasOutput = robotConfig.captureOutput;
     const outputVar = hasOutput
       ? getInstanceVariableName(robotConfig.captureOutput!, instance.variablePrefix)
@@ -867,7 +736,6 @@ function generateTestCases(
 
     lines.push(keywordLine);
 
-    // Keyword arguments
     if (robotConfig.keywordArgs?.length) {
       robotConfig.keywordArgs
         .sort((a, b) => a.position - b.position)
@@ -913,13 +781,14 @@ function generateTestCases(
               argValue = `\${${instanceVarName}}`;
             } else {
               const value = getParameterValue(arg.param, data);
-              let strValue = String(value ?? '');
-              if (strValue.startsWith('${') && strValue.endsWith('}')) {
-                strValue = resolveVariableReference(
-                  strValue, node.id, connectionContext, nodeInstances, nodeMap
-                );
-              }
-              argValue = strValue;
+              const strValue = String(value ?? '');
+              const result = resolveVariableReference(
+                strValue,
+                node.id,
+                allNodes,
+                connectionContext
+              );
+              argValue = result?.resolvedReference ?? strValue;
             }
           } else if (arg.variableName) {
             const instanceVarName = getInstanceVariableName(arg.variableName, instance.variablePrefix);
@@ -932,7 +801,6 @@ function generateTestCases(
         });
     }
 
-    // Post-keyword statements
     if (robotConfig.postKeywordStatements?.length) {
       robotConfig.postKeywordStatements.forEach(stmt => {
         const resolvedStmt = substituteStatementVariables(stmt, instance, robotConfig, sessionContext);
@@ -940,13 +808,11 @@ function generateTestCases(
       });
     }
 
-    // Update session context
     if (robotConfig.sessionVariable) {
       sessionContext.currentSessionVariable = robotConfig.sessionVariable;
       sessionContext.producerNodeId = node.id;
     }
 
-    // Post-keyword log
     if (robotConfig.postKeywordLog) {
       const logMsg = substituteStatementVariables(
         robotConfig.postKeywordLog, instance, robotConfig, sessionContext
@@ -979,6 +845,8 @@ export function generateRobotScript(
   const missingDeps: string[] = [];
 
   const validNodes = nodes.filter(n => {
+    // Opfor nodes need definition, Range target nodes are valid by type
+    if (n.type === 'rangeTargetNode') return true;
     const data = n.data as OpforNodeData;
     return data?.definition;
   });
@@ -1018,7 +886,7 @@ export function generateRobotScript(
   });
 
   const connectedNodeIds = getConnectedNodes(validNodes, edges);
-  const connectedNodes = validNodes.filter(n => connectedNodeIds.has(n.id));
+  const connectedNodes = validNodes.filter(n => connectedNodeIds.has(n.id) && n.type !== 'rangeTargetNode');
   const sortedConnectedNodes = connectedNodes.length > 0
     ? topologicalSort(connectedNodes, edges)
     : [];
@@ -1029,6 +897,7 @@ export function generateRobotScript(
   const variables = generateVariables(validNodes, nodeInstances, globalSettings);
   const testCases = generateTestCases(
     sortedConnectedNodes,
+    validNodes,
     nodeInstances,
     connectionContext,
     nodeMap,
@@ -1037,13 +906,14 @@ export function generateRobotScript(
   const keywords = generateKeywords(validNodes);
 
   validNodes.forEach(node => {
+    if (node.type === 'rangeTargetNode') return;
     const data = node.data as OpforNodeData;
     if (!data.definition.robotFramework) {
       missingDeps.push(`${data.definition.name}: Missing robotFramework configuration`);
     }
   });
 
-  const stagedCount = validNodes.length - connectedNodes.length;
+  const stagedCount = validNodes.filter(n => n.type !== 'rangeTargetNode').length - connectedNodes.length;
   if (stagedCount > 0) {
     warnings.push(`${stagedCount} node(s) staged but not connected to execution chain`);
   }

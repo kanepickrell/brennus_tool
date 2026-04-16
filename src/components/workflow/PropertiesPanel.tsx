@@ -16,6 +16,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
 } from '@/components/ui/select';
 import { 
   Settings, 
@@ -30,6 +33,7 @@ import {
   Link2,
   Unlink,
   ArrowRight,
+  Target,
 } from 'lucide-react';
 import { 
   OpforNodeData, 
@@ -47,11 +51,15 @@ import {
   resolveVariableReference,
   ResolvedVariable,
 } from '@/services/nodeInstanceUtils';
+import { collectTargetSuggestions } from '@/services/variableResolution';
+import { RangeTargetInspector } from './RangeTargetInspector';
+import type { RangeTargetData } from '@/types/opforRangeTarget';
 import { cn } from '@/lib/utils';
 
 interface FlowNode {
   id: string;
-  data: OpforNodeData;
+  type?: string;
+  data: OpforNodeData | RangeTargetData;
 }
 
 interface PropertiesPanelProps {
@@ -60,7 +68,8 @@ interface PropertiesPanelProps {
   timerLog: ExecutionLogEntry[];
   globalSettings: OpforGlobalSettings;
   onSettingsChange: (settings: OpforGlobalSettings) => void;
-  onNodeDataChange?: (nodeId: string, data: OpforNodeData) => void;
+  onNodeDataChange?: (nodeId: string, data: any) => void;
+  onNodeDelete?: (nodeId: string) => void;
   activeTab?: 'properties' | 'instructions' | 'log' | 'settings';
   /** Available variables from canvas for dynamic options */
   availableVariables?: Record<string, CanvasVariable>;
@@ -144,23 +153,47 @@ function ParameterInput({
   currentNodeId,
   resolvedVariable,
   isInherited = false,
+  allNodes = [],
+  connectionContext,
 }: { 
   param: NodeParameter; 
   value: string | number | undefined; 
   onChange: (value: string | number) => void;
   availableVariables?: Record<string, CanvasVariable>;
-  currentNodeId?: string;
-  /** Resolved variable info if this param contains a variable reference */
+  currentNodeId: string;
   resolvedVariable?: ResolvedVariable;
-  /** If true, this parameter is inherited from a connection and should be read-only */
   isInherited?: boolean;
+  allNodes?: FlowNode[];
+  connectionContext?: ConnectionContext;
 }) {
   const dynamicOptions = useMemo(() => {
     if (!param.dynamicOptions || !currentNodeId) return null;
     return getDynamicOptions(param.dynamicOptions, availableVariables, currentNodeId);
   }, [param.dynamicOptions, availableVariables, currentNodeId]);
 
-  const hasDynamicOptions = dynamicOptions && dynamicOptions.length > 0;
+  // Target Suggestions Injection
+  const targetSuggestions = useMemo(() => {
+    if (!connectionContext || !currentNodeId) return [];
+    // Extract identifier from ${VAR_NAME} -> VAR_NAME
+    const paramDefaultVariable = typeof param.default === 'string'
+      ? param.default.replace(/^\${|}$/g, '')
+      : undefined;
+    
+    if (!paramDefaultVariable) return [];
+
+    return collectTargetSuggestions(
+      currentNodeId,
+      paramDefaultVariable,
+      allNodes as any[],
+      connectionContext
+    );
+  }, [currentNodeId, param.default, allNodes, connectionContext]);
+
+  const targetsOnCanvas = useMemo(() => 
+    allNodes.filter(n => n.type === 'rangeTargetNode').length, 
+  [allNodes]);
+
+  const hasDynamicOptions = (dynamicOptions && dynamicOptions.length > 0) || targetSuggestions.length > 0;
   const hasStaticOptions = param.options && param.options.length > 0;
 
   // Check if this value is a variable that got resolved
@@ -200,7 +233,7 @@ function ParameterInput({
     }
 
     if (hasStaticOptions) {
-      if (dynamicOptions && dynamicOptions.length > 1) {
+      if (allOptions.length > 0) {
         allOptions.push({ label: '── Manual Options ──', value: '__separator__' });
       }
       param.options!.forEach(opt => {
@@ -212,7 +245,9 @@ function ParameterInput({
       allOptions.push({ label: '── Enter Manually ──', value: '__manual__' });
     }
 
-    if (allOptions.length === 0 || (allOptions.length === 1 && allOptions[0].value === '__none__')) {
+    const noOptionsFound = allOptions.length === 0 || (allOptions.length === 1 && allOptions[0].value === '__none__');
+
+    if (noOptionsFound && targetSuggestions.length === 0) {
       return (
         <div className="p-2 rounded-md bg-zinc-800/50 border border-zinc-700 text-xs text-zinc-500 italic">
           <div className="flex items-center gap-2">
@@ -248,6 +283,31 @@ function ParameterInput({
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
+            {/* Target suggestions grouped at the top */}
+            {targetSuggestions.length > 0 && (
+              <SelectGroup>
+                <SelectLabel className="text-[10px] uppercase text-emerald-500/70 px-2 py-1 flex items-center gap-1">
+                  <Target className="h-3 w-3" /> From connected targets
+                </SelectLabel>
+                {targetSuggestions.map((s) => (
+                  <SelectItem 
+                    key={`${s.targetNodeId}-${s.fieldId}`} 
+                    value={s.reference}
+                    className="text-xs text-emerald-400 font-mono"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="opacity-70">{s.targetIcon}</span>
+                      <span>{s.targetName}</span>
+                      <ArrowRight className="h-2 w-2 opacity-50" />
+                      <span className="opacity-70">{s.fieldLabel}:</span>
+                      <span>{s.displayValue}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+                <SelectSeparator />
+              </SelectGroup>
+            )}
+
             {allOptions.map((opt, idx) => (
               <SelectItem 
                 key={`${opt.value}-${idx}`} 
@@ -271,6 +331,7 @@ function ParameterInput({
             ))}
           </SelectContent>
         </Select>
+        
         {/* Show resolved value */}
         {isResolved && (
           <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 pl-1">
@@ -278,6 +339,14 @@ function ParameterInput({
             <span className="font-mono">{resolvedVariable.resolved}</span>
             <span className="text-zinc-500">from {resolvedVariable.sourceNodeName}</span>
           </div>
+        )}
+
+        {/* No targets wired hint */}
+        {!value && targetsOnCanvas > 0 && targetSuggestions.length === 0 && (
+          <p className="text-[10px] text-slate-400 italic mt-1 px-1">
+            {targetsOnCanvas} target{targetsOnCanvas === 1 ? '' : 's'} on canvas —
+            wire one to <code className="text-emerald-500/80">target-in</code> for suggestions.
+          </p>
         )}
       </div>
     );
@@ -347,6 +416,13 @@ function ParameterInput({
           <span>Not connected — will use template value</span>
         </div>
       )}
+      {/* No targets wired hint */}
+      {!value && targetsOnCanvas > 0 && targetSuggestions.length === 0 && (
+        <p className="text-[10px] text-slate-400 italic mt-1 px-1">
+          {targetsOnCanvas} target{targetsOnCanvas === 1 ? '' : 's'} on canvas —
+          wire one to <code className="text-emerald-500/80">target-in</code> for suggestions.
+        </p>
+      )}
     </div>
   );
 }
@@ -362,6 +438,7 @@ export function PropertiesPanel({
   globalSettings, 
   onSettingsChange,
   onNodeDataChange,
+  onNodeDelete,
   activeTab = 'properties',
   availableVariables = {},
   edges = [],
@@ -376,7 +453,9 @@ export function PropertiesPanel({
   }, [activeTab]);
 
   const totalTime = nodes.reduce((acc, node) => {
-    return acc + (node.data?.definition?.estimatedDuration || 0);
+    // Basic nodes use OpforNodeData, range nodes use RangeTargetData
+    const duration = (node.data as OpforNodeData)?.definition?.estimatedDuration || 0;
+    return acc + duration;
   }, 0);
 
   // Compute resolved variables for selected node
@@ -387,7 +466,7 @@ export function PropertiesPanel({
       return resolved;
     }
 
-    const nodeData = selectedNode.data;
+    const nodeData = selectedNode.data as OpforNodeData;
     if (!nodeData.parameters) return resolved;
 
     Object.entries(nodeData.parameters).forEach(([paramId, value]) => {
@@ -401,7 +480,9 @@ export function PropertiesPanel({
           nodeInstances,
           nodeMap
         );
-        resolved.set(paramId, resolution);
+        if (resolution) {
+          resolved.set(paramId, resolution);
+        }
       }
     });
 
@@ -411,10 +492,11 @@ export function PropertiesPanel({
   const handleParameterChange = (paramId: string, value: string | number) => {
     if (!selectedNode || !onNodeDataChange) return;
     
+    const nodeData = selectedNode.data as OpforNodeData;
     const updatedData = {
-      ...selectedNode.data,
+      ...nodeData,
       parameters: {
-        ...selectedNode.data.parameters,
+        ...nodeData.parameters,
         [paramId]: value,
       },
     };
@@ -424,8 +506,9 @@ export function PropertiesPanel({
 
   // Count linked variables for current node
   const linkedVariableCount = useMemo(() => {
-    if (!selectedNode) return 0;
-    return Object.values(selectedNode.data.parameters || {})
+    if (!selectedNode || selectedNode.type === 'rangeTargetNode') return 0;
+    const nodeData = selectedNode.data as OpforNodeData;
+    return Object.values(nodeData.parameters || {})
       .filter(v => typeof v === 'string' && v.startsWith('${'))
       .length;
   }, [selectedNode]);
@@ -435,6 +518,17 @@ export function PropertiesPanel({
     return Array.from(resolvedVariables.values()).filter(r => r.wasResolved).length;
   }, [resolvedVariables]);
 
+  // Route Range Target Node selection
+  if (selectedNode?.type === 'rangeTargetNode') {
+    return (
+      <RangeTargetInspector
+        data={selectedNode.data as RangeTargetData}
+        onDataChange={(patch) => onNodeDataChange?.(selectedNode.id, patch)}
+        onDelete={() => onNodeDelete?.(selectedNode.id)}
+      />
+    );
+  }
+
   const renderContent = () => {
     switch (localActiveTab) {
       case 'properties':
@@ -443,268 +537,275 @@ export function PropertiesPanel({
             {selectedNode ? (
               <div className="p-4 space-y-4">
                 {/* Node Header */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{selectedNode.data.definition.icon}</span>
-                    <div>
-                      <h3 className="font-semibold text-foreground">
-                        {selectedNode.data.label || selectedNode.data.definition.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedNode.data.definition.category} › {selectedNode.data.definition.subcategory}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedNode.data.definition.description}
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        'text-[10px]',
-                        tacticBadgeStyles[selectedNode.data.definition.tactic]
-                      )}
-                    >
-                      {tacticLabels[selectedNode.data.definition.tactic]}
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className={cn(
-                        'text-[10px]',
-                        selectedNode.data.definition.riskLevel === 'low' && 'bg-green-500/20 text-green-400 border-green-500/30',
-                        selectedNode.data.definition.riskLevel === 'medium' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-                        selectedNode.data.definition.riskLevel === 'high' && 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-                        selectedNode.data.definition.riskLevel === 'critical' && 'bg-red-500/20 text-red-400 border-red-500/30',
-                      )}
-                    >
-                      Risk: {selectedNode.data.definition.riskLevel}
-                    </Badge>
-                    {resolvedVariableCount > 0 && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                      >
-                        <Link2 className="h-3 w-3 mr-1" />
-                        {resolvedVariableCount} linked
-                      </Badge>
-                    )}
-                    {linkedVariableCount > resolvedVariableCount && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30"
-                      >
-                        <Unlink className="h-3 w-3 mr-1" />
-                        {linkedVariableCount - resolvedVariableCount} unlinked
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                {(() => {
+                   const nodeData = selectedNode.data as OpforNodeData;
+                   return (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{nodeData.definition.icon}</span>
+                          <div>
+                            <h3 className="font-semibold text-foreground">
+                              {nodeData.label || nodeData.definition.name}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              {nodeData.definition.category} › {nodeData.definition.subcategory}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {nodeData.definition.description}
+                        </p>
+                        <div className="flex gap-2 flex-wrap">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              'text-[10px]',
+                              tacticBadgeStyles[nodeData.definition.tactic]
+                            )}
+                          >
+                            {tacticLabels[nodeData.definition.tactic]}
+                          </Badge>
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              'text-[10px]',
+                              nodeData.definition.riskLevel === 'low' && 'bg-green-500/20 text-green-400 border-green-500/30',
+                              nodeData.definition.riskLevel === 'medium' && 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                              nodeData.definition.riskLevel === 'high' && 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                              nodeData.definition.riskLevel === 'critical' && 'bg-red-500/20 text-red-400 border-red-500/30',
+                            )}
+                          >
+                            Risk: {nodeData.definition.riskLevel}
+                          </Badge>
+                          {resolvedVariableCount > 0 && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                            >
+                              <Link2 className="h-3 w-3 mr-1" />
+                              {resolvedVariableCount} linked
+                            </Badge>
+                          )}
+                          {linkedVariableCount > resolvedVariableCount && (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30"
+                            >
+                              <Unlink className="h-3 w-3 mr-1" />
+                              {linkedVariableCount - resolvedVariableCount} unlinked
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
 
-                <Separator />
+                      <Separator />
 
-                {/* Parameters Section */}
-                {selectedNode.data.definition.parameters && selectedNode.data.definition.parameters.length > 0 && (
-                  <>
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                        <Terminal className="h-4 w-4" />
-                        Parameters
-                        {Object.keys(availableVariables).length > 0 && (
-                          <span className="text-[10px] text-cyan-400 ml-auto flex items-center gap-1">
-                            <Link2 className="h-3 w-3" />
-                            {Object.keys(availableVariables).length} vars available
+                      {/* Parameters Section */}
+                      {nodeData.definition.parameters && nodeData.definition.parameters.length > 0 && (
+                        <>
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                              <Terminal className="h-4 w-4" />
+                              Parameters
+                              {Object.keys(availableVariables).length > 0 && (
+                                <span className="text-[10px] text-cyan-400 ml-auto flex items-center gap-1">
+                                  <Link2 className="h-3 w-3" />
+                                  {Object.keys(availableVariables).length} vars available
+                                </span>
+                              )}
+                            </h4>
+                            {nodeData.definition.parameters.map(param => {
+                              const value = nodeData.parameters[param.id];
+                              const isMissing = param.required && (
+                                value === undefined || 
+                                value === null || 
+                                value === '' || 
+                                (typeof value === 'string' && value.trim() === '')
+                              );
+                              const strValue = String(value ?? '');
+                              const isVariableRef = strValue.startsWith('${') && strValue.endsWith('}');
+                              const resolvedVar = resolvedVariables.get(param.id);
+                              const isResolved = resolvedVar?.wasResolved === true;
+                              
+                              return (
+                                <div key={param.id} className="space-y-1.5">
+                                  <Label className={cn(
+                                    "text-[11px] flex items-center gap-1",
+                                    isMissing ? "text-yellow-400" : "text-muted-foreground",
+                                    isResolved && "text-emerald-400",
+                                    isVariableRef && !isResolved && "text-cyan-400"
+                                  )}>
+                                    {isResolved && <Link2 className="h-3 w-3" />}
+                                    {isVariableRef && !isResolved && <Unlink className="h-3 w-3" />}
+                                    {param.label}
+                                    {param.required && !isResolved && <span className="text-destructive">*</span>}
+                                    {param.dynamicOptions && !isResolved && (
+                                      <span className="ml-auto text-[9px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded">
+                                        Dynamic
+                                      </span>
+                                    )}
+                                    {isResolved && (
+                                      <span className="ml-auto text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">
+                                        ↳ Inherited
+                                      </span>
+                                    )}
+                                    {isMissing && !param.dynamicOptions && !isResolved && (
+                                      <span className="ml-auto text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">
+                                        Required
+                                      </span>
+                                    )}
+                                  </Label>
+                                  <ParameterInput
+                                    param={param}
+                                    value={value}
+                                    onChange={(value) => handleParameterChange(param.id, value)}
+                                    availableVariables={availableVariables}
+                                    currentNodeId={selectedNode.id}
+                                    resolvedVariable={resolvedVar}
+                                    isInherited={isResolved && isVariableRef}
+                                    allNodes={nodes}
+                                    connectionContext={connectionContext}
+                                  />
+                                  {param.description && (
+                                    <p className="text-[10px] text-muted-foreground italic">
+                                      {param.description}
+                                    </p>
+                                  )}
+                                  {isMissing && !param.dynamicOptions && (
+                                    <p className="text-[10px] text-yellow-400 flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      This parameter must be filled before validation
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <Separator />
+                        </>
+                      )}
+
+                      {/* Inputs */}
+                      {nodeData.definition.inputs.length > 0 && (
+                        <>
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-foreground">Inputs</h4>
+                            {nodeData.definition.inputs.map(input => {
+                              const isConnected = edges.some(
+                                e => e.target === selectedNode.id && (e.targetHandle === input.id || (!e.targetHandle && input.id === 'default'))
+                              );
+                              
+                              return (
+                                <div 
+                                  key={input.id} 
+                                  className={cn(
+                                    "p-2 rounded-md border",
+                                    isConnected 
+                                      ? "bg-emerald-500/10 border-emerald-500/30" 
+                                      : "bg-sidebar-accent border-sidebar-border"
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className={cn(
+                                      "text-xs",
+                                      isConnected ? "text-emerald-400" : "text-foreground"
+                                    )}>
+                                      {isConnected && <Link2 className="h-3 w-3 inline mr-1.5" />}
+                                      {input.label}
+                                    </span>
+                                    {input.required && !isConnected && (
+                                      <span className="text-[10px] text-destructive">Required</span>
+                                    )}
+                                    {isConnected && (
+                                      <span className="text-[10px] text-emerald-400">Connected</span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+                                    {input.type}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <Separator />
+                        </>
+                      )}
+
+                      {/* Outputs */}
+                      {nodeData.definition.outputs.length > 0 && (
+                        <>
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-foreground">Outputs</h4>
+                            {nodeData.definition.outputs.map(output => {
+                              const isConnected = edges.some(
+                                e => e.source === selectedNode.id && (e.sourceHandle === output.id || (!e.sourceHandle && output.id === 'default'))
+                              );
+                              
+                              return (
+                                <div 
+                                  key={output.id} 
+                                  className={cn(
+                                    "p-2 rounded-md border",
+                                    isConnected 
+                                      ? "bg-cyan-500/10 border-cyan-500/30" 
+                                      : "bg-sidebar-accent border-sidebar-border"
+                                  )}
+                                >
+                                  <span className={cn(
+                                    "text-xs",
+                                    isConnected ? "text-cyan-400" : "text-foreground"
+                                  )}>
+                                    {isConnected && <ArrowRight className="h-3 w-3 inline mr-1.5" />}
+                                    {output.label}
+                                  </span>
+                                  <br />
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono">
+                                    {output.type}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <Separator />
+                        </>
+                      )}
+
+                      {/* Meta Info */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Estimated Time</span>
+                          <span className="text-foreground font-medium">
+                            {nodeData.definition.estimatedDuration < 60 
+                              ? `${nodeData.definition.estimatedDuration}s` 
+                              : `${Math.round(nodeData.definition.estimatedDuration / 60)}m`}
                           </span>
-                        )}
-                      </h4>
-                      {selectedNode.data.definition.parameters.map(param => {
-                        const value = selectedNode.data.parameters[param.id];
-                        const isMissing = param.required && (
-                          value === undefined || 
-                          value === null || 
-                          value === '' || 
-                          (typeof value === 'string' && value.trim() === '')
-                        );
-                        const strValue = String(value ?? '');
-                        const isVariableRef = strValue.startsWith('${') && strValue.endsWith('}');
-                        const resolvedVar = resolvedVariables.get(param.id);
-                        const isResolved = resolvedVar?.wasResolved === true;
-                        
-                        return (
-                          <div key={param.id} className="space-y-1.5">
-                            <Label className={cn(
-                              "text-[11px] flex items-center gap-1",
-                              isMissing ? "text-yellow-400" : "text-muted-foreground",
-                              isResolved && "text-emerald-400",
-                              isVariableRef && !isResolved && "text-cyan-400"
-                            )}>
-                              {isResolved && <Link2 className="h-3 w-3" />}
-                              {isVariableRef && !isResolved && <Unlink className="h-3 w-3" />}
-                              {param.label}
-                              {param.required && !isResolved && <span className="text-destructive">*</span>}
-                              {param.dynamicOptions && !isResolved && (
-                                <span className="ml-auto text-[9px] bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded">
-                                  Dynamic
-                                </span>
-                              )}
-                              {isResolved && (
-                                <span className="ml-auto text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">
-                                  ↳ Inherited
-                                </span>
-                              )}
-                              {isMissing && !param.dynamicOptions && !isResolved && (
-                                <span className="ml-auto text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">
-                                  Required
-                                </span>
-                              )}
-                            </Label>
-                            <ParameterInput
-                              param={param}
-                              value={value}
-                              onChange={(value) => handleParameterChange(param.id, value)}
-                              availableVariables={availableVariables}
-                              currentNodeId={selectedNode.id}
-                              resolvedVariable={resolvedVar}
-                              isInherited={isResolved && isVariableRef}
-                            />
-                            {param.description && (
-                              <p className="text-[10px] text-muted-foreground italic">
-                                {param.description}
-                              </p>
-                            )}
-                            {isMissing && !param.dynamicOptions && (
-                              <p className="text-[10px] text-yellow-400 flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3" />
-                                This parameter must be filled before validation
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <Separator />
-                  </>
-                )}
+                        </div>
+                      </div>
 
-                {/* Inputs */}
-                {selectedNode.data.definition.inputs.length > 0 && (
-                  <>
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-foreground">Inputs</h4>
-                      {selectedNode.data.definition.inputs.map(input => {
-                        // Check if this input is connected
-                        const isConnected = edges.some(
-                          e => e.target === selectedNode.id && (e.targetHandle === input.id || (!e.targetHandle && input.id === 'default'))
-                        );
-                        
-                        return (
-                          <div 
-                            key={input.id} 
-                            className={cn(
-                              "p-2 rounded-md border",
-                              isConnected 
-                                ? "bg-emerald-500/10 border-emerald-500/30" 
-                                : "bg-sidebar-accent border-sidebar-border"
-                            )}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className={cn(
-                                "text-xs",
-                                isConnected ? "text-emerald-400" : "text-foreground"
-                              )}>
-                                {isConnected && <Link2 className="h-3 w-3 inline mr-1.5" />}
-                                {input.label}
-                              </span>
-                              {input.required && !isConnected && (
-                                <span className="text-[10px] text-destructive">Required</span>
-                              )}
-                              {isConnected && (
-                                <span className="text-[10px] text-emerald-400">Connected</span>
-                              )}
-                            </div>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
-                              {input.type}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Outputs */}
-                {selectedNode.data.definition.outputs.length > 0 && (
-                  <>
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-foreground">Outputs</h4>
-                      {selectedNode.data.definition.outputs.map(output => {
-                        // Check if this output is connected
-                        const isConnected = edges.some(
-                          e => e.source === selectedNode.id && (e.sourceHandle === output.id || (!e.sourceHandle && output.id === 'default'))
-                        );
-                        
-                        return (
-                          <div 
-                            key={output.id} 
-                            className={cn(
-                              "p-2 rounded-md border",
-                              isConnected 
-                                ? "bg-cyan-500/10 border-cyan-500/30" 
-                                : "bg-sidebar-accent border-sidebar-border"
-                            )}
-                          >
-                            <span className={cn(
-                              "text-xs",
-                              isConnected ? "text-cyan-400" : "text-foreground"
-                            )}>
-                              {isConnected && <ArrowRight className="h-3 w-3 inline mr-1.5" />}
-                              {output.label}
-                            </span>
-                            <br />
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-mono">
-                              {output.type}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <Separator />
-                  </>
-                )}
-
-                {/* Meta Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Estimated Time</span>
-                    <span className="text-foreground font-medium">
-                      {selectedNode.data.definition.estimatedDuration < 60 
-                        ? `${selectedNode.data.definition.estimatedDuration}s` 
-                        : `${Math.round(selectedNode.data.definition.estimatedDuration / 60)}m`}
-                    </span>
-                  </div>
-                </div>
-
-                <div className={cn(
-                  "flex items-center gap-2 p-2 rounded-md",
-                  resolvedVariableCount > 0 
-                    ? "bg-emerald-500/10 border border-emerald-500/20"
-                    : "bg-green-500/10 border border-green-500/20"
-                )}>
-                  <CheckCircle2 className={cn(
-                    "h-4 w-4",
-                    resolvedVariableCount > 0 ? "text-emerald-500" : "text-green-500"
-                  )} />
-                  <span className={cn(
-                    "text-xs",
-                    resolvedVariableCount > 0 ? "text-emerald-400" : "text-green-400"
-                  )}>
-                    {resolvedVariableCount > 0 
-                      ? `Ready — ${resolvedVariableCount} variable(s) resolved from connections`
-                      : 'Ready to execute'
-                    }
-                  </span>
-                </div>
+                      <div className={cn(
+                        "flex items-center gap-2 p-2 rounded-md",
+                        resolvedVariableCount > 0 
+                          ? "bg-emerald-500/10 border border-emerald-500/20"
+                          : "bg-green-500/10 border border-green-500/20"
+                      )}>
+                        <CheckCircle2 className={cn(
+                          "h-4 w-4",
+                          resolvedVariableCount > 0 ? "text-emerald-500" : "text-green-500"
+                        )} />
+                        <span className={cn(
+                          "text-xs",
+                          resolvedVariableCount > 0 ? "text-emerald-400" : "text-green-400"
+                        )}>
+                          {resolvedVariableCount > 0 
+                            ? `Ready — ${resolvedVariableCount} variable(s) resolved from connections`
+                            : 'Ready to execute'
+                          }
+                        </span>
+                      </div>
+                    </>
+                   );
+                })()}
               </div>
             ) : (
               <div className="h-full flex items-center justify-center p-4">
@@ -740,29 +841,39 @@ export function PropertiesPanel({
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {nodes.map((node, index) => (
-                    <div 
-                      key={node.id} 
-                      className="p-3 rounded-md bg-sidebar-accent border border-sidebar-border"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">
-                          {index + 1}
-                        </span>
-                        <div className="flex-1 space-y-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span>{node.data.definition.icon}</span>
-                            <h4 className="text-sm font-semibold text-foreground">
-                              {node.data.definition.name}
-                            </h4>
+                  {nodes.map((node, index) => {
+                    const nodeData = node.data as OpforNodeData;
+                    const isTarget = node.type === 'rangeTargetNode';
+                    return (
+                      <div 
+                        key={node.id} 
+                        className={cn(
+                          "p-3 rounded-md border",
+                          isTarget ? "bg-emerald-500/5 border-emerald-500/20" : "bg-sidebar-accent border-sidebar-border"
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className={cn(
+                            "flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0",
+                            isTarget ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground"
+                          )}>
+                            {index + 1}
+                          </span>
+                          <div className="flex-1 space-y-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span>{isTarget ? (node.data as RangeTargetData).icon || '🎯' : nodeData.definition.icon}</span>
+                              <h4 className="text-sm font-semibold text-foreground">
+                                {isTarget ? (node.data as RangeTargetData).name : nodeData.definition.name}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {isTarget ? `Target: ${(node.data as RangeTargetData).fields.ip || 'Unset'}` : nodeData.definition.description}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {node.data.definition.description}
-                          </p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -1,13 +1,14 @@
 // src/components/workflow/NodePalette.tsx
 // Browse mode: existing catalog behavior (drag individual nodes)
 // Guided mode: variation card feed — pick a complete attack chain
+// Targets mode: drag infrastructure/range targets onto the canvas
 // Custom commands can be authored inline and deleted via a trash icon on the card.
 
 import { useState, useMemo, useEffect } from 'react';
 import {
   Search, ChevronRight, RefreshCw, Sparkles, BookOpen,
   ChevronDown, CheckCircle2, ArrowRight,
-  Plus as PlusIcon, Trash2,
+  Plus as PlusIcon, Trash2, Target,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,6 +33,13 @@ import {
   DIFFICULTY_CONFIG,
 } from '@/data/guidedVariations';
 import { CustomCommandDialog } from './CustomCommandDialog';
+
+// Infrastructure / Target Imports
+import { RANGE_TARGET_TEMPLATES } from '@/data/rangeTargets';
+import type {
+  RangeTargetKind,
+  CanvasDragPayload,
+} from '@/types/opforRangeTarget';
 
 // ── Tactic config ────────────────────────────────────────────────────────────
 
@@ -65,8 +73,6 @@ export interface NodePaletteProps {
 }
 
 // ── Helper: build a full OpforNodeDefinition from a raw API module object ───
-// Centralised here so Browse and Guided produce identical node definitions.
-// IMPORTANT: propagates `isCustom` so the palette can badge operator-authored cards.
 
 function buildNodeDefinition(m: any): OpforNodeDefinition & { isCustom?: boolean } {
   let tactic = m.tactic || m.Tactic || 'control';
@@ -112,7 +118,6 @@ function buildNodeDefinition(m: any): OpforNodeDefinition & { isCustom?: boolean
     robotFramework:      m.robotFramework || m.RobotFramework || undefined,
     shellCommand:        m.shellCommand || m.ShellCommand || undefined,
     requirements:        m.requirements || m.Requirements || {},
-    // Operator-authored flag — propagated through so the palette can badge it.
     isCustom:            m.isCustom === true,
   };
 }
@@ -123,8 +128,8 @@ function ModeToggle({
   mode,
   onChange,
 }: {
-  mode: 'browse' | 'guided';
-  onChange: (m: 'browse' | 'guided') => void;
+  mode: 'browse' | 'guided' | 'targets';
+  onChange: (m: 'browse' | 'guided' | 'targets') => void;
 }) {
   return (
     <div className="flex items-center bg-zinc-900/80 border border-zinc-800 rounded-sm p-0.5 w-full">
@@ -152,6 +157,63 @@ function ModeToggle({
         <Sparkles className="h-3 w-3" />
         Guided
       </button>
+      <button
+        onClick={() => onChange('targets')}
+        className={cn(
+          'flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-sm transition-all duration-150',
+          mode === 'targets'
+            ? 'bg-blue-500/15 border border-blue-500/40 text-blue-400'
+            : 'text-zinc-500 hover:text-zinc-300'
+        )}
+      >
+        <Target className="h-3 w-3" />
+        Targets
+      </button>
+    </div>
+  );
+}
+
+// ── Targets Mode ─────────────────────────────────────────────────────────────
+
+function TargetsView() {
+  const onTargetDragStart = (e: React.DragEvent, kind: RangeTargetKind) => {
+    const payload: CanvasDragPayload = {
+      __dragType: 'rangeTarget',
+      payload: { kind },
+    };
+    e.dataTransfer.setData('application/json', JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-3 py-2 border-b border-zinc-800/60">
+        <p className="text-[10px] text-zinc-500 leading-relaxed">
+          Drag infrastructure nodes onto the canvas to define targets, pivot points, or C2 endpoints.
+        </p>
+      </div>
+      <ScrollArea className="flex-1 mt-2">
+        <div className="px-2 pb-4 space-y-2">
+          {Object.values(RANGE_TARGET_TEMPLATES).map((t) => (
+            <div
+              key={t.kind}
+              draggable
+              onDragStart={(e) => onTargetDragStart(e, t.kind)}
+              className="flex items-start gap-3 p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/40 hover:border-blue-500/50 hover:bg-zinc-900/60 transition-all cursor-grab active:cursor-grabbing group"
+            >
+              <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-zinc-800 border border-zinc-700 rounded text-xl group-hover:scale-110 transition-transform">
+                {t.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-bold text-zinc-100">{t.label}</div>
+                <div className="text-[10px] text-zinc-500 leading-snug line-clamp-2">
+                  {t.description}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
@@ -334,11 +396,6 @@ function PhaseSection({
   );
 }
 
-// ── GuidedView ───────────────────────────────────────────────────────────────
-// Receives the already-loaded `modules` from the parent so it can look up each
-// step's full OpforNodeDefinition (with robotFramework, parameters, inputs,
-// outputs) before calling onSelectVariation.
-
 function GuidedView({
   onSelectVariation,
   modules,
@@ -349,7 +406,6 @@ function GuidedView({
   const [selectedIds, setSelectedIds] = useState<Record<string, string>>({});
   const [openPhaseId, setOpenPhaseId] = useState<string>(GUIDED_PHASES[0].id);
 
-  // Build a lookup map: _key / id → full module object
   const moduleMap = useMemo(() => {
     const map = new Map<string, any>();
     modules.forEach(m => {
@@ -362,7 +418,6 @@ function GuidedView({
   const handleSelect = (v: GuidedVariation) => {
     setSelectedIds(prev => ({ ...prev, [v.phaseId]: v.id }));
 
-    // Auto-advance to next uncovered phase
     const currentPhaseIndex = GUIDED_PHASES.findIndex(p => p.id === v.phaseId);
     const nextPhase = GUIDED_PHASES
       .slice(currentPhaseIndex + 1)
@@ -374,7 +429,6 @@ function GuidedView({
       setTimeout(() => setOpenPhaseId(''), 350);
     }
 
-    // ── Enrich variation steps with full module definitions ──────────────────
     const enrichedVariation: GuidedVariation = {
       ...v,
       steps: v.steps.map(step => {
@@ -682,22 +736,16 @@ function BrowseView({
                             <button
                               type="button"
                               onClick={(e) => {
-                                // Stop propagation so the parent card's drag/click
-                                // handlers don't fire when hitting the trash icon.
                                 e.stopPropagation();
                                 e.preventDefault();
                                 onRequestDeleteCustom(node);
                               }}
-                              // Hide on the card until hover so operators don't
-                              // accidentally hit it during drag.
                               className={cn(
                                 'flex-shrink-0 p-1 rounded opacity-0 group-hover/card:opacity-100',
                                 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10',
                                 'transition-all duration-150',
                               )}
                               title="Delete this custom command"
-                              // Prevent the card from starting a drag when the
-                              // user grabs the trash icon.
                               draggable={false}
                               onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             >
@@ -730,18 +778,26 @@ export function NodePalette({
   selectedNodeIds = [],
 }: NodePaletteProps) {
   const { toast } = useToast();
-  const [mode, setMode] = useState<'browse' | 'guided'>('browse');
+  const [mode, setMode] = useState<'browse' | 'guided' | 'targets'>('browse');
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
 
-  // Which custom command (if any) is pending deletion — drives the AlertDialog.
   const [pendingDelete, setPendingDelete] = useState<
     (OpforNodeDefinition & { isCustom?: boolean }) | null
   >(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Load modules ONCE at the top level — shared between Browse and Guided
-  // so Guided can look up full definitions without a separate fetch.
   const { modules, loading, error, refresh } = useLibraryModules();
+
+  // Wrap the incoming onDragStart to use the new discriminated CanvasDragPayload
+  const handleOpforDragStart = (e: React.DragEvent, def: OpforNodeDefinition) => {
+    const payload: CanvasDragPayload = {
+      __dragType: 'opforNode',
+      payload: def,
+    };
+    e.dataTransfer.setData('application/json', JSON.stringify(payload));
+    // Optional: Call original prop if parent still expects individual dataTransfer setting
+    onDragStart(e, def);
+  };
 
   const handleConfirmDelete = async () => {
     if (!pendingDelete) return;
@@ -779,7 +835,7 @@ export function NodePalette({
       <div className="px-3 pt-3 pb-2 border-b border-zinc-800 space-y-2 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-[11px] font-bold text-zinc-100 uppercase tracking-widest">
-            {mode === 'browse' ? 'Tactic Library' : 'Guided Build'}
+            {mode === 'browse' ? 'Tactic Library' : mode === 'guided' ? 'Guided Build' : 'Infrastructure'}
           </h2>
           <div className="flex items-center gap-1.5">
             {mode === 'browse' && (
@@ -848,9 +904,9 @@ export function NodePalette({
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        {mode === 'browse' ? (
+        {mode === 'browse' && (
           <BrowseView
-            onDragStart={onDragStart}
+            onDragStart={handleOpforDragStart}
             tacticFilter={tacticFilter}
             onClearTacticFilter={onClearTacticFilter}
             modules={modules}
@@ -859,11 +915,15 @@ export function NodePalette({
             refresh={refresh}
             onRequestDeleteCustom={setPendingDelete}
           />
-        ) : (
+        )}
+        {mode === 'guided' && (
           <GuidedView
             onSelectVariation={onSelectVariation}
             modules={modules}
           />
+        )}
+        {mode === 'targets' && (
+          <TargetsView />
         )}
       </div>
 

@@ -117,7 +117,7 @@ export const OpforNode = memo(({ data, selected }: { data: OpforNodeData; select
       validationState === 'executing' && 'shadow-lg shadow-purple-500/20',
     )}>
       {/* Input Handles */}
-      {inputs.map((input, i) => (
+      {inputs.map((input) => (
         <Handle
           key={input.id}
           type="target"
@@ -131,9 +131,19 @@ export const OpforNode = memo(({ data, selected }: { data: OpforNodeData; select
             validationState === 'validated' ? 'bg-green-500'  :
             'bg-primary',
           )}
-          style={{ top: `${((i + 1) / (inputs.length + 1)) * 100}%` }}
+          style={{ top: '30%' }}
         />
       ))}
+
+      {/* Target Input Handle - Accepts range target connections */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="target-in"
+        className="w-3 h-3 !bg-slate-400 border-2 border-white"
+        style={{ top: '70%' }}
+        title="Accepts range target connections (auto-suggests field values for matching parameters)"
+      />
 
       {/* Header */}
       <div className="px-2.5 py-1.5 border-b border-white/10">

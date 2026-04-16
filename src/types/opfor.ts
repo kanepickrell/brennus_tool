@@ -36,6 +36,15 @@ export type NodeValidationState =
   | 'success'
   | 'failed';
 
+export type {
+  RangeTargetKind,
+  RangeTargetField,
+  RangeTargetData,
+  RangeTargetEmitMode,
+  CanvasDragPayload,
+  RangeTargetDragPayload,
+} from './opforRangeTarget';
+
 // Add this near the top of types/opfor.ts, after the MitreTactic type definition
 
 export const tacticLabels: Record<MitreTactic, string> = {

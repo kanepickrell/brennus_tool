@@ -1,58 +1,82 @@
 // src/services/nodeInstanceUtils.ts
-// Shared utilities for node instance tracking and variable resolution
-// Used by both robotScriptGenerator and PropertiesPanel
+//
+// Shared utilities for node instance tracking.
+//
+// Variable-resolution logic has been consolidated into ./variableResolution
+// to remove the duplicate implementations that previously lived here and in
+// robotScriptGenerator. Consumers that previously imported resolution
+// primitives from this file should import them from ./variableResolution
+// directly. We keep a small set of re-exports here for callers that haven't
+// been migrated yet — kept as a SINGLE consolidated block to avoid
+// import/re-export interleaving that has produced bundler TDZ issues in the
+// past.
 
-import { Node, Edge } from '@xyflow/react';
-import { OpforNodeData } from '@/types/opfor';
+import type { Node } from '@xyflow/react';
+import type { OpforNodeData } from '@/types/opfor';
 
-/**
- * Instance tracking for unique variable naming
- */
+// Single consolidated import from variableResolution for both internal use
+// and re-export. Don't mix `import` and `export ... from` for the same names
+// in the same file — some bundlers hoist the re-export and TDZ on the
+// adjacent `import`.
+import {
+  resolveVariableReference,
+  buildConnectionContext,
+  extractCategory,
+  unwrapVariableRef,
+  collectTargetSuggestions,
+  type ConnectionContext,
+  type InputSources,
+  type OutputTargets,
+  type ResolutionResult,
+  type ResolvedVariable,
+  type ResolutionSourceNode,
+  type TargetSuggestion,
+  type EdgeLike,
+} from './variableResolution';
+
+// Plain value re-exports (no circular-ref surface).
+export {
+  resolveVariableReference,
+  buildConnectionContext,
+  extractCategory,
+  unwrapVariableRef,
+  collectTargetSuggestions,
+};
+
+// Type re-exports.
+export type {
+  ConnectionContext,
+  InputSources,
+  OutputTargets,
+  ResolutionResult,
+  ResolvedVariable,
+  ResolutionSourceNode,
+  TargetSuggestion,
+  EdgeLike,
+};
+
+// ---------------------------------------------------------------------------
+// Instance tracking for unique variable naming
+// ---------------------------------------------------------------------------
+
 export interface NodeInstance {
   node: Node;
-  instanceIndex: number;      // 1-based index for this module type
-  moduleId: string;           // The base module ID (e.g., "cs-create-listener")
-  variablePrefix: string;     // e.g., "" for first instance, "_2" for second
+  instanceIndex: number;   // 1-based index for this module type
+  moduleId: string;        // Base module ID (e.g., "cs-create-listener")
+  variablePrefix: string;  // "" for first instance, "_2" for second, ...
 }
 
 /**
- * Connection context - maps node inputs to their source nodes
- */
-export interface ConnectionContext {
-  /** Map of nodeId -> { inputId -> sourceNodeId } */
-  inputSources: Map<string, Map<string, string>>;
-  /** Map of nodeId -> { outputId -> targetNodeIds[] } */
-  outputTargets: Map<string, Map<string, string[]>>;
-}
-
-/**
- * Result of resolving a variable reference
- */
-export interface ResolvedVariable {
-  /** The original value (e.g., "${LISTENER_NAME}") */
-  original: string;
-  /** The resolved value (e.g., "${LISTENER_NAME_3}") */
-  resolved: string;
-  /** Whether resolution occurred */
-  wasResolved: boolean;
-  /** Source node name if resolved */
-  sourceNodeName?: string;
-  /** Source node ID if resolved */
-  sourceNodeId?: string;
-  /** The instance index of the source */
-  sourceInstanceIndex?: number;
-}
-
-/**
- * Build instance tracking for all nodes
- * Assigns unique instance numbers to nodes of the same module type
+ * Build instance tracking for all nodes. Assigns unique instance numbers to
+ * nodes of the same module type, so duplicate modules get non-colliding
+ * Robot variable names.
  */
 export function buildNodeInstances(nodes: Node[]): Map<string, NodeInstance> {
   const instances = new Map<string, NodeInstance>();
   const moduleCount = new Map<string, number>();
 
   nodes.forEach(node => {
-    const data = node.data as OpforNodeData;
+    const data = node.data as OpforNodeData | undefined;
     if (!data?.definition) return;
 
     const moduleId = data.definition.id || data.definition._key || 'unknown';
@@ -73,36 +97,8 @@ export function buildNodeInstances(nodes: Node[]): Map<string, NodeInstance> {
 }
 
 /**
- * Build connection context from edges
- */
-export function buildConnectionContext(edges: Edge[]): ConnectionContext {
-  const inputSources = new Map<string, Map<string, string>>();
-  const outputTargets = new Map<string, Map<string, string[]>>();
-
-  edges.forEach(edge => {
-    // Track input sources: target node's input <- source node
-    if (!inputSources.has(edge.target)) {
-      inputSources.set(edge.target, new Map());
-    }
-    const targetInputHandle = edge.targetHandle || 'default';
-    inputSources.get(edge.target)!.set(targetInputHandle, edge.source);
-
-    // Track output targets: source node's output -> target nodes
-    if (!outputTargets.has(edge.source)) {
-      outputTargets.set(edge.source, new Map());
-    }
-    const sourceOutputHandle = edge.sourceHandle || 'default';
-    if (!outputTargets.get(edge.source)!.has(sourceOutputHandle)) {
-      outputTargets.get(edge.source)!.set(sourceOutputHandle, []);
-    }
-    outputTargets.get(edge.source)!.get(sourceOutputHandle)!.push(edge.target);
-  });
-
-  return { inputSources, outputTargets };
-}
-
-/**
- * Get the instance-specific variable name
+ * Get the instance-specific variable name by appending the instance prefix.
+ * First instance: baseName. Second: baseName_2. Third: baseName_3. Etc.
  */
 export function getInstanceVariableName(baseName: string, prefix: string): string {
   if (!prefix) return baseName;
@@ -110,91 +106,10 @@ export function getInstanceVariableName(baseName: string, prefix: string): strin
 }
 
 /**
- * Robot Framework config interface (subset needed for resolution)
- */
-interface RobotFrameworkConfig {
-  variables?: Array<{
-    name: string;
-    fromParam?: string;
-    scope: string;
-  }>;
-}
-
-/**
- * Resolve a variable reference based on canvas connections
- * 
- * If a parameter value is like ${LISTENER_NAME}, we check if this node
- * has an input connected to a node that produces LISTENER_NAME variables.
- * If so, we return the source node's instance-specific variable.
- */
-export function resolveVariableReference(
-  varRef: string,
-  currentNodeId: string,
-  connectionContext: ConnectionContext,
-  nodeInstances: Map<string, NodeInstance>,
-  nodeMap: Map<string, Node>
-): ResolvedVariable {
-  // Default result - no resolution
-  const defaultResult: ResolvedVariable = {
-    original: varRef,
-    resolved: varRef,
-    wasResolved: false,
-  };
-
-  // Check if it's a variable reference
-  if (!varRef.startsWith('${') || !varRef.endsWith('}')) {
-    return defaultResult;
-  }
-
-  const baseVarName = varRef.slice(2, -1); // e.g., "LISTENER_NAME"
-  
-  // Get the category prefix (e.g., "LISTENER" from "LISTENER_NAME")
-  const varCategory = baseVarName.split('_')[0];
-
-  // Look at what's connected to this node's inputs
-  const inputSources = connectionContext.inputSources.get(currentNodeId);
-  if (!inputSources) {
-    return defaultResult;
-  }
-
-  // Find a source node that produces variables in this category
-  for (const [_inputId, sourceNodeId] of inputSources) {
-    const sourceNode = nodeMap.get(sourceNodeId);
-    if (!sourceNode) continue;
-
-    const sourceData = sourceNode.data as OpforNodeData;
-    const sourceRobotConfig = sourceData.definition.robotFramework as RobotFrameworkConfig | undefined;
-    if (!sourceRobotConfig?.variables) continue;
-
-    // Check if source node produces variables in this category
-    const matchingVar = sourceRobotConfig.variables.find(v => {
-      const vCategory = v.name.split('_')[0];
-      return vCategory === varCategory;
-    });
-
-    if (matchingVar) {
-      // Found the source! Use its instance-specific variable
-      const sourceInstance = nodeInstances.get(sourceNodeId);
-      if (sourceInstance) {
-        const instanceVarName = getInstanceVariableName(baseVarName, sourceInstance.variablePrefix);
-        return {
-          original: varRef,
-          resolved: `\${${instanceVarName}}`,
-          wasResolved: true,
-          sourceNodeName: sourceData.definition.name,
-          sourceNodeId: sourceNodeId,
-          sourceInstanceIndex: sourceInstance.instanceIndex,
-        };
-      }
-    }
-  }
-
-  return defaultResult;
-}
-
-/**
- * Get all resolved variables for a node's parameters
- * Returns a map of paramId -> ResolvedVariable
+ * Get all resolved variables for a node's parameters.
+ * Returns a map of paramId -> ResolutionResult, keyed only for params whose
+ * current value is a ${VAR} reference AND that actually resolve to something
+ * via an upstream connection.
  */
 export function resolveNodeParameters(
   nodeId: string,
@@ -202,14 +117,14 @@ export function resolveNodeParameters(
   connectionContext: ConnectionContext,
   nodeInstances: Map<string, NodeInstance>,
   nodeMap: Map<string, Node>
-): Map<string, ResolvedVariable> {
-  const resolved = new Map<string, ResolvedVariable>();
+): Map<string, ResolutionResult> {
+  const resolved = new Map<string, ResolutionResult>();
 
   if (!nodeData.parameters) return resolved;
 
   Object.entries(nodeData.parameters).forEach(([paramId, value]) => {
     const strValue = String(value ?? '');
-    
+
     if (strValue.startsWith('${') && strValue.endsWith('}')) {
       const resolution = resolveVariableReference(
         strValue,
@@ -218,7 +133,9 @@ export function resolveNodeParameters(
         nodeInstances,
         nodeMap
       );
-      resolved.set(paramId, resolution);
+      if (resolution) {
+        resolved.set(paramId, resolution);
+      }
     }
   });
 
