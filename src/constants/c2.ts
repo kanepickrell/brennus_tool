@@ -9,14 +9,15 @@ export interface C2BadgeConfig {
 }
 
 export const C2_BADGE: Record<string, C2BadgeConfig> = {
-  cobalt_strike: { label: 'Cobalt Strike', abbr: 'CS',  hex: '#e05c00' },
-  sliver:        { label: 'Sliver',         abbr: 'SL',  hex: '#7c3aed' },
-  havoc:         { label: 'Havoc',          abbr: 'HV',  hex: '#dc2626' },
-  ssh:           { label: 'SSH',            abbr: 'SSH', hex: '#0284c7' },
-  shell:         { label: 'Shell',          abbr: 'SH',  hex: '#16a34a' },
-  orchestration: { label: 'Orchestration',  abbr: 'OR',  hex: '#6b7280' },
-  utility:       { label: 'Utility',        abbr: 'UT',  hex: '#ca8a04' },
-  phishing:      { label: 'Phishing', abbr: 'PH', hex: '#dc2626' },
+  cobalt_strike: { label: 'Cobalt Strike',              abbr: 'CS',     hex: '#e05c00' },
+  sliver:        { label: 'Sliver',                     abbr: 'SL',     hex: '#7c3aed' },
+  havoc:         { label: 'Havoc',                      abbr: 'HV',     hex: '#dc2626' },
+  ssh:           { label: 'SSH',                        abbr: 'SSH',    hex: '#0284c7' },
+  shell:         { label: 'Shell',                      abbr: 'SH',     hex: '#16a34a' },
+  orchestration: { label: 'Orchestration',              abbr: 'OR',     hex: '#6b7280' },
+  utility:       { label: 'Utility',                    abbr: 'UT',     hex: '#ca8a04' },
+  phishing:      { label: 'Phishing',                   abbr: 'PH',     hex: '#dc2626' },
+  custom:        { label: 'Custom (Operator-authored)', abbr: 'CUSTOM', hex: '#f59e0b' },
 };
 
 // Ordered list for filter UI — controls display order of C2 filter buttons

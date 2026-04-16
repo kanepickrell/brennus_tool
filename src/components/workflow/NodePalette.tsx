@@ -1,17 +1,28 @@
 // src/components/workflow/NodePalette.tsx
 // Browse mode: existing catalog behavior (drag individual nodes)
 // Guided mode: variation card feed — pick a complete attack chain
+// Custom commands can be authored inline and deleted via a trash icon on the card.
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, ChevronRight, RefreshCw, Sparkles, BookOpen,
-         ChevronDown, CheckCircle2, ArrowRight } from 'lucide-react';
+import {
+  Search, ChevronRight, RefreshCw, Sparkles, BookOpen,
+  ChevronDown, CheckCircle2, ArrowRight,
+  Plus as PlusIcon, Trash2,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useLibraryModules } from '@/hooks/useLibraryModules';
 import { OpforNodeDefinition, MitreTactic } from '@/types/opfor';
 import { cn } from '@/lib/utils';
 import { C2_BADGE } from '@/constants/c2';
+import { API_CONFIG } from '@/config/api';
+import { useToast } from '@/hooks/use-toast';
 import {
   GuidedVariation,
   GUIDED_PHASES,
@@ -20,23 +31,24 @@ import {
   TACTIC_COLORS,
   DIFFICULTY_CONFIG,
 } from '@/data/guidedVariations';
+import { CustomCommandDialog } from './CustomCommandDialog';
 
 // ── Tactic config ────────────────────────────────────────────────────────────
 
 const tacticConfig: Record<string, { label: string; icon: string; color: string }> = {
-  'TA0001': { label: 'Initial Access',        icon: '🚪', color: 'text-blue-400'   },
-  'TA0004': { label: 'Privilege Escalation',  icon: '👑', color: 'text-pink-400'   },
-  'TA0042': { label: 'Resource Development',  icon: '🏗️', color: 'text-teal-400'   },
-  'TA0002': { label: 'Execution',             icon: '⚡', color: 'text-orange-400' },
-  'TA0003': { label: 'Persistence',           icon: '🔒', color: 'text-purple-400' },
-  'TA0005': { label: 'Defense Evasion',       icon: '🛡️', color: 'text-indigo-400' },
-  'TA0006': { label: 'Credential Access',     icon: '🔑', color: 'text-red-400'    },
-  'TA0007': { label: 'Discovery',             icon: '🔍', color: 'text-green-400'  },
-  'TA0008': { label: 'Lateral Movement',      icon: '🚀', color: 'text-purple-400' },
-  'TA0009': { label: 'Collection',            icon: '📦', color: 'text-cyan-400'   },
-  'TA0011': { label: 'Command & Control',     icon: '📡', color: 'text-yellow-400' },
+  'TA0001': { label: 'Initial Access',        icon: '🚪', color: 'text-blue-400'    },
+  'TA0004': { label: 'Privilege Escalation',  icon: '👑', color: 'text-pink-400'    },
+  'TA0042': { label: 'Resource Development',  icon: '🏗️', color: 'text-teal-400'    },
+  'TA0002': { label: 'Execution',             icon: '⚡', color: 'text-orange-400'  },
+  'TA0003': { label: 'Persistence',           icon: '🔒', color: 'text-purple-400'  },
+  'TA0005': { label: 'Defense Evasion',       icon: '🛡️', color: 'text-indigo-400'  },
+  'TA0006': { label: 'Credential Access',     icon: '🔑', color: 'text-red-400'     },
+  'TA0007': { label: 'Discovery',             icon: '🔍', color: 'text-green-400'   },
+  'TA0008': { label: 'Lateral Movement',      icon: '🚀', color: 'text-purple-400'  },
+  'TA0009': { label: 'Collection',            icon: '📦', color: 'text-cyan-400'    },
+  'TA0011': { label: 'Command & Control',     icon: '📡', color: 'text-yellow-400'  },
   'TA0043': { label: 'Reconnaissance',        icon: '📡', color: 'text-emerald-400' },
-  'control': { label: 'Control Flow',         icon: '⚙️', color: 'text-zinc-400'   },
+  'control': { label: 'Control Flow',         icon: '⚙️', color: 'text-zinc-400'    },
 };
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -53,10 +65,10 @@ export interface NodePaletteProps {
 }
 
 // ── Helper: build a full OpforNodeDefinition from a raw API module object ───
-// This is the same mapping BrowseView does — centralised here so both modes
-// produce identical node definitions.
+// Centralised here so Browse and Guided produce identical node definitions.
+// IMPORTANT: propagates `isCustom` so the palette can badge operator-authored cards.
 
-function buildNodeDefinition(m: any): OpforNodeDefinition {
+function buildNodeDefinition(m: any): OpforNodeDefinition & { isCustom?: boolean } {
   let tactic = m.tactic || m.Tactic || 'control';
 
   const tacticNameToId: Record<string, string> = {
@@ -100,6 +112,8 @@ function buildNodeDefinition(m: any): OpforNodeDefinition {
     robotFramework:      m.robotFramework || m.RobotFramework || undefined,
     shellCommand:        m.shellCommand || m.ShellCommand || undefined,
     requirements:        m.requirements || m.Requirements || {},
+    // Operator-authored flag — propagated through so the palette can badge it.
+    isCustom:            m.isCustom === true,
   };
 }
 
@@ -321,10 +335,9 @@ function PhaseSection({
 }
 
 // ── GuidedView ───────────────────────────────────────────────────────────────
-// KEY FIX: receives the already-loaded `modules` from the parent so it can
-// look up each step's full OpforNodeDefinition (with robotFramework, parameters,
-// inputs, outputs) before calling onSelectVariation.
-// This makes Guided produce identical node definitions to Browse drag-and-drop.
+// Receives the already-loaded `modules` from the parent so it can look up each
+// step's full OpforNodeDefinition (with robotFramework, parameters, inputs,
+// outputs) before calling onSelectVariation.
 
 function GuidedView({
   onSelectVariation,
@@ -362,9 +375,6 @@ function GuidedView({
     }
 
     // ── Enrich variation steps with full module definitions ──────────────────
-    // Look up each step's moduleKey in the loaded modules map so the variation
-    // carries complete OpforNodeDefinition objects (parameters, inputs, outputs,
-    // robotFramework) — exactly what Browse drag-and-drop produces.
     const enrichedVariation: GuidedVariation = {
       ...v,
       steps: v.steps.map(step => {
@@ -372,11 +382,9 @@ function GuidedView({
         if (raw) {
           return {
             ...step,
-            // Attach the full node definition so WorkflowBuilder can use it directly
             _resolvedDefinition: buildNodeDefinition(raw),
           } as any;
         }
-        // Module not found in loaded list — log a warning, pass step as-is
         console.warn(`[GuidedView] Module key not found in library: "${step.moduleKey}"`);
         return step;
       }),
@@ -460,6 +468,7 @@ function BrowseView({
   loading,
   error,
   refresh,
+  onRequestDeleteCustom,
 }: {
   onDragStart: (e: React.DragEvent, node: OpforNodeDefinition) => void;
   tacticFilter?: string | null;
@@ -468,6 +477,7 @@ function BrowseView({
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  onRequestDeleteCustom: (node: OpforNodeDefinition & { isCustom?: boolean }) => void;
 }) {
   const [search, setSearch] = useState('');
   const [c2Filter, setC2Filter] = useState<string>('all');
@@ -479,7 +489,7 @@ function BrowseView({
   const categories = useMemo(() => {
     if (!modules || modules.length === 0) return [];
 
-    const nodeDefinitions: OpforNodeDefinition[] = modules.map(buildNodeDefinition);
+    const nodeDefinitions = modules.map(buildNodeDefinition);
 
     const tactics: MitreTactic[] = [
       'TA0042', 'TA0043', 'TA0001', 'TA0002', 'TA0003', 'TA0004', 'TA0005',
@@ -614,13 +624,15 @@ function BrowseView({
                     .filter(n => n.name.toLowerCase().includes(search.toLowerCase()))
                     .map(node => {
                       const badge = C2_BADGE[node.executionType];
+                      const isCustom = (node as any).isCustom === true;
                       return (
                         <div
                           key={node.id}
                           draggable
                           onDragStart={e => onDragStart(e, node)}
                           className={cn(
-                            'flex items-center gap-2 p-2 rounded bg-zinc-900/50 border border-zinc-800',
+                            'group/card flex items-center gap-2 p-2 rounded bg-zinc-900/50 border',
+                            isCustom ? 'border-amber-500/30' : 'border-zinc-800',
                             'cursor-grab hover:border-zinc-600 hover:bg-zinc-900 transition-colors',
                             'active:cursor-grabbing active:scale-95',
                           )}
@@ -651,8 +663,47 @@ function BrowseView({
                                   {badge.abbr}
                                 </span>
                               )}
+                              {isCustom && (
+                                <span
+                                  style={{
+                                    fontSize: '9px', fontWeight: 700, padding: '0px 4px',
+                                    borderRadius: '3px', background: '#f59e0b22',
+                                    color: '#f59e0b', border: '1px solid #f59e0b55',
+                                    letterSpacing: '0.04em', lineHeight: '14px',
+                                  }}
+                                  title="Operator-authored — pending dev team review"
+                                >
+                                  CUSTOM
+                                </span>
+                              )}
                             </div>
                           </div>
+                          {isCustom && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                // Stop propagation so the parent card's drag/click
+                                // handlers don't fire when hitting the trash icon.
+                                e.stopPropagation();
+                                e.preventDefault();
+                                onRequestDeleteCustom(node);
+                              }}
+                              // Hide on the card until hover so operators don't
+                              // accidentally hit it during drag.
+                              className={cn(
+                                'flex-shrink-0 p-1 rounded opacity-0 group-hover/card:opacity-100',
+                                'text-zinc-500 hover:text-red-400 hover:bg-red-500/10',
+                                'transition-all duration-150',
+                              )}
+                              title="Delete this custom command"
+                              // Prevent the card from starting a drag when the
+                              // user grabs the trash icon.
+                              draggable={false}
+                              onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       );
                     })}
@@ -678,11 +729,48 @@ export function NodePalette({
   onContainerizeSelected,
   selectedNodeIds = [],
 }: NodePaletteProps) {
+  const { toast } = useToast();
   const [mode, setMode] = useState<'browse' | 'guided'>('browse');
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+
+  // Which custom command (if any) is pending deletion — drives the AlertDialog.
+  const [pendingDelete, setPendingDelete] = useState<
+    (OpforNodeDefinition & { isCustom?: boolean }) | null
+  >(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Load modules ONCE at the top level — shared between Browse and Guided
   // so Guided can look up full definitions without a separate fetch.
   const { modules, loading, error, refresh } = useLibraryModules();
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(
+        `${API_CONFIG.BASE_URL}/api/custom-commands/${encodeURIComponent(pendingDelete.id)}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(detail || `HTTP ${res.status}`);
+      }
+      toast({
+        title: 'Custom command deleted',
+        description: `"${pendingDelete.name}" was removed from the palette.`,
+      });
+      setPendingDelete(null);
+      refresh();
+    } catch (e) {
+      toast({
+        title: 'Delete failed',
+        description: e instanceof Error ? e.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-zinc-950 border-r border-zinc-800">
@@ -694,6 +782,16 @@ export function NodePalette({
             {mode === 'browse' ? 'Tactic Library' : 'Guided Build'}
           </h2>
           <div className="flex items-center gap-1.5">
+            {mode === 'browse' && (
+              <button
+                onClick={() => setCustomDialogOpen(true)}
+                title="Author a new custom command module"
+                className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono border text-amber-400 bg-amber-400/10 border-amber-400/30 hover:bg-amber-400/20 hover:border-amber-400/50 transition-colors"
+              >
+                <PlusIcon className="h-2.5 w-2.5" />
+                Custom
+              </button>
+            )}
             {mode === 'browse' && onToggleFramingMode && (
               <button
                 onClick={onToggleFramingMode}
@@ -759,6 +857,7 @@ export function NodePalette({
             loading={loading}
             error={error}
             refresh={refresh}
+            onRequestDeleteCustom={setPendingDelete}
           />
         ) : (
           <GuidedView
@@ -767,6 +866,56 @@ export function NodePalette({
           />
         )}
       </div>
+
+      {/* ── Custom Command Dialog ── */}
+      <CustomCommandDialog
+        open={customDialogOpen}
+        onClose={() => setCustomDialogOpen(false)}
+        onSaved={refresh}
+      />
+
+      {/* ── Delete confirmation ── */}
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open && !deleting) setPendingDelete(null); }}
+      >
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100 flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-red-400" />
+              Delete custom command?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This will permanently remove{' '}
+              <span className="text-amber-300 font-semibold">
+                &ldquo;{pendingDelete?.name}&rdquo;
+              </span>{' '}
+              from the palette. The module JSON will be deleted from{' '}
+              <code className="text-[10px] bg-zinc-900 px-1 py-0.5 rounded text-zinc-300">
+                server/custom_commands/
+              </code>.
+              <br /><br />
+              Any nodes already placed on the canvas will keep their definition,
+              but the module will no longer be available to drag in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleting}
+              className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={handleConfirmDelete}
+              className="bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 hover:text-red-200"
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

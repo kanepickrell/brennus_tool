@@ -477,6 +477,3 @@ class LibraryModuleService {
 
 // Export singleton instance
 export const libraryModuleService = new LibraryModuleService();
-
-// Export types for convenience
-export type { LibraryModuleMetadata, LibraryModulePayload, LibraryModule };

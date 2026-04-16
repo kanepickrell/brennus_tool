@@ -20,7 +20,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocke
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 
 
 # PTY support - Unix only
@@ -252,6 +252,26 @@ def _resolve_cs_library() -> Optional[Path]:
 
 
 # =============================================================================
+# Data directories
+# =============================================================================
+
+DATA_DIR = Path(__file__).parent / "data"
+
+# -----------------------------------------------------------------------------
+# Custom Commands — operator-authored modules
+# -----------------------------------------------------------------------------
+# Operators can author ad-hoc command modules during a session. They land here
+# for the dev team to review and later promote into server/data/. The JSON
+# schema matches what robotScriptGenerator.ts expects, minus the advanced
+# robotFramework fields (which the dev team fills in during promotion).
+CUSTOM_COMMANDS_DIR = Path(__file__).parent / "custom_commands"
+CUSTOM_COMMANDS_DIR.mkdir(exist_ok=True)
+
+CAMPAIGNS_DIR = Path(__file__).parent / "campaigns"
+CAMPAIGNS_DIR.mkdir(exist_ok=True)
+
+
+# =============================================================================
 # App Lifecycle
 # =============================================================================
 
@@ -266,6 +286,7 @@ async def lifespan(app: FastAPI):
     print(f"   Local module data: {DATA_DIR} ({'exists' if DATA_DIR.exists() else 'NOT FOUND'})")
     if DATA_DIR.exists():
         print(f"   Module JSON files: {len(list(DATA_DIR.glob('*.json')))}")
+    print(f"   Custom commands: {CUSTOM_COMMANDS_DIR} ({len(list(CUSTOM_COMMANDS_DIR.glob('*.json')))} authored)")
 
     cs_lib = _resolve_cs_library()
     if cs_lib:
@@ -371,6 +392,31 @@ class TeamserverStartRequest(BaseModel):
     ip: str
     password: str
     cs_dir: Optional[str] = None
+
+
+class CustomCommandRequest(BaseModel):
+    """
+    Operator-authored custom command module.
+
+    Note on `_key`: Pydantic v2 treats leading-underscore attribute names as
+    private by default. We bind the incoming JSON field `_key` to the
+    attribute `key` via an alias, and enable `populate_by_name` so both work.
+    Access via `request.key` inside handlers.
+    """
+    model_config = ConfigDict(populate_by_name=True)
+
+    key: str = Field(..., alias="_key")
+    name: str
+    tactic: str
+    icon: Optional[str] = "⚡"
+    category: Optional[str] = "Custom"
+    subcategory: Optional[str] = ""
+    description: Optional[str] = ""
+    riskLevel: Optional[str] = "medium"
+    estimatedDuration: Optional[int] = 30
+    executionType: Optional[str] = "cobalt_strike"
+    parameters: List[Dict[str, Any]] = []
+    robotFramework: Dict[str, Any] = {}
 
 
 # =============================================================================
@@ -970,9 +1016,6 @@ async def test_robot_execution():
 # Local Module Data Endpoints
 # =============================================================================
 
-DATA_DIR = Path(__file__).parent / "data"
-
-
 @app.get("/api/library-modules")
 async def get_library_modules(search: Optional[str] = None, limit: int = 500):
     modules = []
@@ -1020,12 +1063,95 @@ async def get_module_payload(module_key: str):
 
 
 # =============================================================================
+# Custom Commands Endpoints — operator-authored modules
+# =============================================================================
+# Saved JSONs conform to the same schema robotScriptGenerator.ts consumes.
+# Dev team reviews server/custom_commands/*.json and promotes good ones
+# into server/data/ by hand. No auto-publish.
+
+def _custom_cmd_path(key: str) -> Path:
+    """Sanitize key and return path under CUSTOM_COMMANDS_DIR."""
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in key).strip("_")
+    if not safe:
+        raise HTTPException(status_code=400, detail="Invalid custom command key")
+    return CUSTOM_COMMANDS_DIR / f"{safe}.json"
+
+
+@app.get("/api/custom-commands")
+async def list_custom_commands():
+    """Return all custom commands in the same shape as /api/library-modules."""
+    modules = []
+    for json_file in sorted(CUSTOM_COMMANDS_DIR.glob("*.json")):
+        try:
+            data = json.loads(json_file.read_text())
+            modules.append({
+                "_key": data.get("_key", data.get("key", json_file.stem)),
+                "id": data.get("_key", data.get("key", json_file.stem)),
+                "name": data.get("name", json_file.stem),
+                "icon": data.get("icon", "⚡"),
+                "tactic": data.get("tactic", "control"),
+                "category": data.get("category", "Custom"),
+                "subcategory": data.get("subcategory", ""),
+                "description": data.get("description", ""),
+                "riskLevel": data.get("riskLevel", "medium"),
+                "estimatedDuration": data.get("estimatedDuration", 30),
+                "executionType": data.get("executionType", "cobalt_strike"),
+                "tags": data.get("tags", []),
+                "isCustom": True,  # palette uses this to badge the card
+                "payload_url": f"/api/custom-commands/{json_file.stem}",
+            })
+        except Exception as e:
+            print(f"Warning: Could not load custom command {json_file.name}: {e}")
+    return {"modules": modules, "total": len(modules)}
+
+
+@app.get("/api/custom-commands/{key}")
+async def get_custom_command(key: str):
+    """Return full payload for a single custom command."""
+    path = _custom_cmd_path(key)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Custom command not found: {key}")
+    try:
+        return json.loads(path.read_text())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read custom command: {e}")
+
+
+@app.post("/api/custom-commands")
+async def save_custom_command(request: CustomCommandRequest):
+    """Write a new custom command JSON. Returns the full saved payload."""
+    # Minimal validation: require name and keyword
+    if not request.name.strip():
+        raise HTTPException(status_code=400, detail="name is required")
+    if not request.robotFramework.get("keyword"):
+        raise HTTPException(status_code=400, detail="robotFramework.keyword is required")
+
+    # Serialize by alias so the JSON on disk has `_key` (matches robotScriptGenerator.ts)
+    payload = request.model_dump(by_alias=True)
+    payload["_authored_by"] = "operator"
+    payload["_authored_at"] = datetime.now().isoformat()
+    payload["isCustom"] = True
+
+    path = _custom_cmd_path(request.key)
+    try:
+        path.write_text(json.dumps(payload, indent=2))
+        return {"status": "saved", "key": request.key, "path": str(path), "payload": payload}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save custom command: {e}")
+
+
+@app.delete("/api/custom-commands/{key}")
+async def delete_custom_command(key: str):
+    path = _custom_cmd_path(key)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Custom command not found: {key}")
+    path.unlink()
+    return {"status": "deleted", "key": key}
+
+
+# =============================================================================
 # Campaign Persistence Endpoints
 # =============================================================================
-
-CAMPAIGNS_DIR = Path(__file__).parent / "campaigns"
-CAMPAIGNS_DIR.mkdir(exist_ok=True)
-
 
 class CampaignSaveRequest(BaseModel):
     name: str

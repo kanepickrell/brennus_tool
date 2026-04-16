@@ -1,22 +1,28 @@
 // operator/src/hooks/useLibraryModules.ts
 // Updated for Two-Tier Storage architecture
+// Also merges operator-authored custom commands from /api/custom-commands.
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  libraryModuleService, 
+import {
+  libraryModuleService,
   LibraryModuleMetadata,
   LibraryModulePayload,
   LibraryModule,
-  LibraryModuleFilters 
+  LibraryModuleFilters,
 } from '../services/libraryModuleService';
+import { API_CONFIG } from '@/config/api';
 
 /**
  * Hook for fetching module metadata (lightweight, for palette/search)
- * 
+ *
  * Use this for:
  * - Node palette display
  * - Search results
  * - Module listings
+ *
+ * Fetches both the main library and operator-authored custom commands in
+ * parallel and merges them. Custom commands are tagged `isCustom: true`
+ * so the palette can render a CUSTOM badge on their cards.
  */
 export function useLibraryModules(filters?: LibraryModuleFilters) {
   const [modules, setModules] = useState<LibraryModuleMetadata[]>([]);
@@ -31,10 +37,22 @@ export function useLibraryModules(filters?: LibraryModuleFilters) {
       try {
         setLoading(true);
         setError(null);
-        const data = await libraryModuleService.getAllModules(filters);
-        
+
+        // Fetch library + custom commands in parallel
+        const [libraryData, customData] = await Promise.all([
+          libraryModuleService.getAllModules(filters),
+          // Custom commands bypass the service cache so they stay fresh on refresh()
+          fetch(`${API_CONFIG.BASE_URL}/api/custom-commands`)
+            .then(r => (r.ok ? r.json() : { modules: [] }))
+            .then(d => (d.modules ?? []) as LibraryModuleMetadata[])
+            .catch(() => []),
+        ]);
+
+        // Customs first so they appear at the top of each tactic group
+        const merged = [...customData, ...libraryData];
+
         if (mounted) {
-          setModules(data);
+          setModules(merged);
           setLoading(false);
         }
       } catch (err) {
@@ -82,7 +100,7 @@ export function useLibraryModule(moduleKey: string) {
         setLoading(true);
         setError(null);
         const data = await libraryModuleService.getModule(moduleKey);
-        
+
         if (mounted) {
           setModule(data);
           setLoading(false);
@@ -107,7 +125,7 @@ export function useLibraryModule(moduleKey: string) {
 
 /**
  * Hook for fetching a module's full payload
- * 
+ *
  * Use this when:
  * - Configuring a node (need inputs/outputs/parameters)
  * - Viewing module details
@@ -152,7 +170,7 @@ export function useModulePayload(moduleKey: string, payloadUrl?: string) {
 
 /**
  * Hook for fetching a module with its payload merged
- * 
+ *
  * Convenience hook that combines metadata + payload into one object.
  * Use when you need the complete module definition.
  */
@@ -175,7 +193,7 @@ export function useModuleWithPayload(moduleKey: string) {
         setLoading(true);
         setError(null);
         const data = await libraryModuleService.getModuleWithPayload(moduleKey);
-        
+
         if (mounted) {
           setModule(data);
           setLoading(false);
@@ -206,7 +224,7 @@ export function useModuleWithPayload(moduleKey: string) {
 
 /**
  * Hook for lazy-loading payload on demand
- * 
+ *
  * Returns metadata immediately, loads payload only when requested.
  * Good for lists where you might expand one item.
  */
@@ -253,6 +271,6 @@ export function useLazyModulePayload(moduleKey: string) {
     payloadError,
     payloadLoaded,
     loadPayload,
-    openInNewTab
+    openInNewTab,
   };
 }
