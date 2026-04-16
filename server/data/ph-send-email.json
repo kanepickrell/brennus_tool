@@ -2,42 +2,97 @@
   "_key": "ph-send-email",
   "name": "Send Phishing Email",
   "tactic": "TA0001",
-  "icon": "📤",
+  "icon": "\ud83d\udce4",
   "description": "Transmit the constructed phishing email via SMTP using smtp-cli",
   "executionType": "phishing",
   "estimatedDuration": 10,
   "inputs": [
-    { "id": "emailReady", "label": "Email Ready", "type": "signal", "required": true }
+    {
+      "id": "emailReady",
+      "label": "Email Ready",
+      "type": "signal",
+      "required": true
+    }
   ],
   "outputs": [
-    { "id": "sent", "label": "Email Sent", "type": "signal" }
+    {
+      "id": "sent",
+      "label": "Email Sent",
+      "type": "signal"
+    }
   ],
   "parameters": [
-    { "id": "emailServer", "label": "SMTP Server IP", "type": "string", "required": true, "placeholder": "10.0.0.25", "default": "${PHISHING_SERVER}" },
-    { "id": "emailPort",   "label": "SMTP Port",      "type": "number", "required": true, "placeholder": "25",        "default": "${PHISHING_PORT}"   }
+    {
+      "id": "emailServer",
+      "label": "SMTP Server IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "10.0.0.25",
+      "default": "${PHISHING_SERVER}"
+    },
+    {
+      "id": "emailPort",
+      "label": "SMTP Port",
+      "type": "number",
+      "required": true,
+      "placeholder": "25",
+      "default": "${PHISHING_PORT}"
+    }
   ],
   "requirements": {
     "c2Server": false,
-    "libraries": ["phishing/PhishingLibrary.py"]
+    "libraries": [
+      "phishing/PhishingLibrary.py"
+    ]
   },
   "robotFramework": {
     "keyword": "Send the Email",
-    "libraries": ["phishing/PhishingLibrary.py"],
+    "libraries": [
+      "phishing/PhishingLibrary.py"
+    ],
     "libraryArgs": [
-      { "paramName": "smtp_cli_path", "globalSetting": "SMTP_CLI_PATH", "position": 1 }
+      {
+        "paramName": "smtp_cli_path",
+        "globalSetting": "SMTP_CLI_PATH",
+        "position": 1
+      }
     ],
     "keywordArgs": [
-      { "param": "emailServer", "variableRef": true, "variableName": "PHISHING_SERVER", "position": 1 },
-      { "param": "emailPort",   "variableRef": true, "variableName": "PHISHING_PORT",   "position": 2 }
+      {
+        "param": "emailServer",
+        "variableRef": true,
+        "variableName": "PHISHING_SERVER",
+        "position": 1
+      },
+      {
+        "param": "emailPort",
+        "variableRef": true,
+        "variableName": "PHISHING_PORT",
+        "position": 2
+      }
     ],
     "variables": [
-      { "name": "PHISHING_SERVER", "fromParam": "emailServer", "default": "10.0.0.25", "scope": "suite" },
-      { "name": "PHISHING_PORT",   "fromParam": "emailPort",   "default": "25",         "scope": "suite" }
+      {
+        "name": "PHISHING_SERVER",
+        "fromParam": "emailServer",
+        "default": "10.0.0.25",
+        "scope": "suite"
+      },
+      {
+        "name": "PHISHING_PORT",
+        "fromParam": "emailPort",
+        "default": "25",
+        "scope": "suite"
+      }
     ],
     "isSuiteSetup": false,
-    "preKeywordLog":  "=== Sending Phishing Email via ${PHISHING_SERVER}:${PHISHING_PORT} ===",
+    "preKeywordLog": "=== Sending Phishing Email via ${PHISHING_SERVER}:${PHISHING_PORT} ===",
     "postKeywordLog": "=== Email Sent ===",
     "documentation": "Send phishing email via smtp-cli",
-    "tags": ["phishing", "initial-access", "smtp"]
+    "tags": [
+      "phishing",
+      "initial-access",
+      "smtp"
+    ]
   }
 }

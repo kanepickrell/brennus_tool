@@ -248,6 +248,25 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
   }, []);
 
   // ==========================================================================
+  // GENERATED ROBOT SCRIPT
+  // Must be declared BEFORE handleRunExecution to avoid temporal dead zone.
+  // Recomputed any time nodes/edges/settings change.
+  // Passed to ExecutionPanel as scriptContent — visible in Script tab and
+  // used by the Execute button.
+  // ==========================================================================
+  const generatedScript = useMemo(() => {
+    if (nodes.length === 0) return null;
+    try {
+      const script = generateRobotScript(nodes, edges, globalSettings);
+      console.log('Generated Robot script:', script.meta);
+      return script;
+    } catch (error) {
+      console.error('Failed to generate Robot script:', error);
+      return null;
+    }
+  }, [nodes, edges, globalSettings]);
+
+  // ==========================================================================
   // EXECUTION HANDLERS
   // The Execute button / Ctrl+Enter calls handleRunExecution.
   // That opens the panel and forwards the generated .robot script to
@@ -343,24 +362,6 @@ function WorkflowBuilderInner({ campaign }: { campaign?: CampaignConfig | null }
   const nodeMap = useMemo((): Map<string, Node> => {
     return new Map(nodes.map(n => [n.id, n]));
   }, [nodes]);
-
-  // ==========================================================================
-  // GENERATED ROBOT SCRIPT
-  // Recomputed any time nodes/edges/settings change.
-  // Passed to ExecutionPanel as scriptContent — visible in Script tab and
-  // used by the Execute button.
-  // ==========================================================================
-  const generatedScript = useMemo(() => {
-    if (nodes.length === 0) return null;
-    try {
-      const script = generateRobotScript(nodes, edges, globalSettings);
-      console.log('Generated Robot script:', script.meta);
-      return script;
-    } catch (error) {
-      console.error('Failed to generate Robot script:', error);
-      return null;
-    }
-  }, [nodes, edges, globalSettings]);
 
   // ==========================================================================
   // CANVAS VARIABLES

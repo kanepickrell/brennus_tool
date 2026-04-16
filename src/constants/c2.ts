@@ -16,6 +16,7 @@ export const C2_BADGE: Record<string, C2BadgeConfig> = {
   shell:         { label: 'Shell',          abbr: 'SH',  hex: '#16a34a' },
   orchestration: { label: 'Orchestration',  abbr: 'OR',  hex: '#6b7280' },
   utility:       { label: 'Utility',        abbr: 'UT',  hex: '#ca8a04' },
+  phishing:      { label: 'Phishing', abbr: 'PH', hex: '#dc2626' },
 };
 
 // Ordered list for filter UI — controls display order of C2 filter buttons

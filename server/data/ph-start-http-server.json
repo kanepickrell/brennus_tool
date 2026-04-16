@@ -2,45 +2,119 @@
   "_key": "ph-start-http-server",
   "name": "Start HTTP Server",
   "tactic": "TA0001",
-  "icon": "🌐",
+  "icon": "\ud83c\udf10",
   "description": "Start local HTTP server to host payloads for phishing delivery",
   "executionType": "phishing",
   "estimatedDuration": 5,
   "inputs": [
-    { "id": "signal", "label": "Signal", "type": "signal", "required": false }
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false
+    }
   ],
   "outputs": [
-    { "id": "done", "label": "Server Ready", "type": "signal" }
+    {
+      "id": "done",
+      "label": "Server Ready",
+      "type": "signal"
+    }
   ],
   "parameters": [
-    { "id": "hostDirectory",   "label": "Host Directory",   "type": "string", "required": true,  "placeholder": "/home/bah/Projects",         "default": "${HOST_DIR}"         },
-    { "id": "uploadDirectory", "label": "Upload Directory", "type": "string", "required": true,  "placeholder": "/home/bah/Projects/uploads", "default": "${UPLOAD_DIR}"       },
-    { "id": "httpPort",        "label": "HTTP Port",        "type": "number", "required": true,  "placeholder": "9008",                       "default": "${HTTP_SERVER_PORT}" }
+    {
+      "id": "hostDirectory",
+      "label": "Host Directory",
+      "type": "string",
+      "required": true,
+      "placeholder": "/home/bah/Projects",
+      "default": "${HOST_DIR}"
+    },
+    {
+      "id": "uploadDirectory",
+      "label": "Upload Directory",
+      "type": "string",
+      "required": true,
+      "placeholder": "/home/bah/Projects/uploads",
+      "default": "${UPLOAD_DIR}"
+    },
+    {
+      "id": "httpPort",
+      "label": "HTTP Port",
+      "type": "number",
+      "required": true,
+      "placeholder": "9008",
+      "default": "${HTTP_SERVER_PORT}"
+    }
   ],
   "requirements": {
     "c2Server": false,
-    "libraries": ["phishing/PhishingLibrary.py", "phishing/HTTPLibrary.py"]
+    "libraries": [
+      "phishing/PhishingLibrary.py",
+      "phishing/HTTPLibrary.py"
+    ]
   },
   "robotFramework": {
     "keyword": "Start Local HTTP server",
-    "libraries": ["phishing/PhishingLibrary.py", "phishing/HTTPLibrary.py"],
+    "libraries": [
+      "phishing/PhishingLibrary.py",
+      "phishing/HTTPLibrary.py"
+    ],
     "libraryArgs": [
-      { "paramName": "smtp_cli_path", "globalSetting": "SMTP_CLI_PATH", "position": 1 }
+      {
+        "paramName": "smtp_cli_path",
+        "globalSetting": "SMTP_CLI_PATH",
+        "position": 1
+      }
     ],
     "keywordArgs": [
-      { "param": "hostDirectory",   "variableRef": true, "variableName": "HOST_DIR",         "position": 1 },
-      { "param": "uploadDirectory", "variableRef": true, "variableName": "UPLOAD_DIR",        "position": 2 },
-      { "param": "httpPort",        "variableRef": true, "variableName": "HTTP_SERVER_PORT",  "position": 3 }
+      {
+        "param": "hostDirectory",
+        "variableRef": true,
+        "variableName": "HOST_DIR",
+        "position": 1
+      },
+      {
+        "param": "uploadDirectory",
+        "variableRef": true,
+        "variableName": "UPLOAD_DIR",
+        "position": 2
+      },
+      {
+        "param": "httpPort",
+        "variableRef": true,
+        "variableName": "HTTP_SERVER_PORT",
+        "position": 3
+      }
     ],
     "variables": [
-      { "name": "HOST_DIR",         "fromParam": "hostDirectory",   "default": "/home/bah/Projects",         "scope": "suite" },
-      { "name": "UPLOAD_DIR",       "fromParam": "uploadDirectory", "default": "/home/bah/Projects/uploads", "scope": "suite" },
-      { "name": "HTTP_SERVER_PORT", "fromParam": "httpPort",        "default": "9008",                       "scope": "suite" }
+      {
+        "name": "HOST_DIR",
+        "fromParam": "hostDirectory",
+        "default": "/home/bah/Projects",
+        "scope": "suite"
+      },
+      {
+        "name": "UPLOAD_DIR",
+        "fromParam": "uploadDirectory",
+        "default": "/home/bah/Projects/uploads",
+        "scope": "suite"
+      },
+      {
+        "name": "HTTP_SERVER_PORT",
+        "fromParam": "httpPort",
+        "default": "9008",
+        "scope": "suite"
+      }
     ],
     "isSuiteSetup": true,
-    "preKeywordLog":  "=== Starting HTTP Payload Server on port ${HTTP_SERVER_PORT} ===",
+    "preKeywordLog": "=== Starting HTTP Payload Server on port ${HTTP_SERVER_PORT} ===",
     "postKeywordLog": "=== HTTP Server Ready ===",
     "documentation": "Start local HTTP server for payload hosting",
-    "tags": ["phishing", "infrastructure", "http"]
+    "tags": [
+      "phishing",
+      "infrastructure",
+      "http"
+    ]
   }
 }

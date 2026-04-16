@@ -2,31 +2,48 @@
   "_key": "ph-stop-http-server",
   "name": "Stop HTTP Server",
   "tactic": "TA0001",
-  "icon": "🔌",
+  "icon": "\ud83d\udd0c",
   "description": "Shut down the local HTTP payload hosting server",
   "executionType": "phishing",
   "estimatedDuration": 2,
   "inputs": [
-    { "id": "signal", "label": "Signal", "type": "signal", "required": false }
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false
+    }
   ],
   "outputs": [
-    { "id": "done", "label": "Server Stopped", "type": "signal" }
+    {
+      "id": "done",
+      "label": "Server Stopped",
+      "type": "signal"
+    }
   ],
   "parameters": [],
   "requirements": {
     "c2Server": false,
-    "libraries": ["phishing/HTTPLibrary.py"]
+    "libraries": [
+      "phishing/HTTPLibrary.py"
+    ]
   },
   "robotFramework": {
     "keyword": "Stop Local HTTP server",
-    "libraries": ["phishing/HTTPLibrary.py"],
+    "libraries": [
+      "phishing/HTTPLibrary.py"
+    ],
     "libraryArgs": [],
     "keywordArgs": [],
     "variables": [],
     "isSuiteTeardown": true,
-    "preKeywordLog":  "=== Shutting Down HTTP Server ===",
+    "preKeywordLog": "=== Shutting Down HTTP Server ===",
     "postKeywordLog": "=== HTTP Server Stopped ===",
     "documentation": "Stop local HTTP server",
-    "tags": ["phishing", "infrastructure", "http"]
+    "tags": [
+      "phishing",
+      "infrastructure",
+      "http"
+    ]
   }
 }

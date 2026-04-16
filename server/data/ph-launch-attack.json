@@ -2,66 +2,259 @@
   "_key": "ph-launch-attack",
   "name": "Launch Phishing Attack",
   "tactic": "TA0001",
-  "icon": "🎣",
-  "description": "Full phishing pipeline: build email from template and transmit in one step. Use this for single-node campaigns; wire ph-create-email → ph-send-email separately for multi-step control.",
+  "icon": "\ud83c\udfa3",
+  "description": "Full phishing pipeline: build email from template and transmit in one step. Use this for single-node campaigns; wire ph-create-email \u2192 ph-send-email separately for multi-step control.",
   "executionType": "phishing",
   "estimatedDuration": 15,
   "inputs": [
-    { "id": "signal", "label": "Signal", "type": "signal", "required": false }
+    {
+      "id": "signal",
+      "label": "Signal",
+      "type": "signal",
+      "required": false
+    }
   ],
   "outputs": [
-    { "id": "sent", "label": "Attack Launched", "type": "signal" }
+    {
+      "id": "sent",
+      "label": "Attack Launched",
+      "type": "signal"
+    }
   ],
   "parameters": [
-    { "id": "hostIp",      "label": "HTTP Server IP",   "type": "string", "required": true,  "placeholder": "10.10.104.30",                   "default": "${HTTP_SERVER_IP}"   },
-    { "id": "httpPort",    "label": "HTTP Port",         "type": "number", "required": true,  "placeholder": "9008",                           "default": "${HTTP_SERVER_PORT}" },
-    { "id": "sender",      "label": "Sender Address",   "type": "string", "required": true,  "placeholder": "it-support@company.com",          "default": "${PHISHING_SENDER}" },
-    { "id": "targetList",  "label": "Target List",      "type": "string", "required": true,  "placeholder": "/home/bah/Projects/targets.txt", "default": "${TARGET_LIST_PATH}"},
-    { "id": "emailHeader", "label": "Email Subject",    "type": "string", "required": true,  "placeholder": "Security Update Required",        "default": "${EMAIL_SUBJECT}"   },
-    { "id": "emailBody",   "label": "Body HTML Path",   "type": "string", "required": true,  "placeholder": "/home/bah/Projects/body.html",   "default": "${BODY_HTML_PATH}"  },
-    { "id": "attachment",  "label": "Attachment Path",  "type": "string", "required": false, "placeholder": "${EMPTY}",                        "default": "${EMPTY}"           },
-    { "id": "payloadName", "label": "Payload Filename", "type": "string", "required": true,  "placeholder": "pca_update.exe",                  "default": "${PAYLOAD_NAME}"    },
-    { "id": "emailServer", "label": "SMTP Server IP",   "type": "string", "required": true,  "placeholder": "10.0.0.25",                       "default": "${PHISHING_SERVER}" },
-    { "id": "emailPort",   "label": "SMTP Port",        "type": "number", "required": true,  "placeholder": "25",                              "default": "${PHISHING_PORT}"   }
+    {
+      "id": "hostIp",
+      "label": "HTTP Server IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "10.10.104.30",
+      "default": "${HTTP_SERVER_IP}"
+    },
+    {
+      "id": "httpPort",
+      "label": "HTTP Port",
+      "type": "number",
+      "required": true,
+      "placeholder": "9008",
+      "default": "${HTTP_SERVER_PORT}"
+    },
+    {
+      "id": "sender",
+      "label": "Sender Address",
+      "type": "string",
+      "required": true,
+      "placeholder": "it-support@company.com",
+      "default": "${PHISHING_SENDER}"
+    },
+    {
+      "id": "targetList",
+      "label": "Target List",
+      "type": "string",
+      "required": true,
+      "placeholder": "/home/bah/Projects/targets.txt",
+      "default": "${TARGET_LIST_PATH}"
+    },
+    {
+      "id": "emailHeader",
+      "label": "Email Subject",
+      "type": "string",
+      "required": true,
+      "placeholder": "Security Update Required",
+      "default": "${EMAIL_SUBJECT}"
+    },
+    {
+      "id": "emailBody",
+      "label": "Body HTML Path",
+      "type": "string",
+      "required": true,
+      "placeholder": "/home/bah/Projects/body.html",
+      "default": "${BODY_HTML_PATH}"
+    },
+    {
+      "id": "attachment",
+      "label": "Attachment Path",
+      "type": "string",
+      "required": false,
+      "placeholder": "${EMPTY}",
+      "default": "${EMPTY}"
+    },
+    {
+      "id": "payloadName",
+      "label": "Payload Filename",
+      "type": "string",
+      "required": true,
+      "placeholder": "pca_update.exe",
+      "default": "${PAYLOAD_NAME}"
+    },
+    {
+      "id": "emailServer",
+      "label": "SMTP Server IP",
+      "type": "string",
+      "required": true,
+      "placeholder": "10.0.0.25",
+      "default": "${PHISHING_SERVER}"
+    },
+    {
+      "id": "emailPort",
+      "label": "SMTP Port",
+      "type": "number",
+      "required": true,
+      "placeholder": "25",
+      "default": "${PHISHING_PORT}"
+    }
   ],
   "requirements": {
     "c2Server": false,
-    "libraries": ["phishing/PhishingLibrary.py", "phishing/HTTPLibrary.py"]
+    "libraries": [
+      "phishing/PhishingLibrary.py",
+      "phishing/HTTPLibrary.py"
+    ]
   },
   "robotFramework": {
     "keyword": "Launch the Phishing Attack",
-    "libraries": ["phishing/PhishingLibrary.py", "phishing/HTTPLibrary.py"],
+    "libraries": [
+      "phishing/PhishingLibrary.py",
+      "phishing/HTTPLibrary.py"
+    ],
     "libraryArgs": [
-      { "paramName": "smtp_cli_path", "globalSetting": "SMTP_CLI_PATH", "position": 1 }
+      {
+        "paramName": "smtp_cli_path",
+        "globalSetting": "SMTP_CLI_PATH",
+        "position": 1
+      }
     ],
     "keywordArgs": [
-      { "param": "hostIp",      "variableRef": true, "variableName": "HTTP_SERVER_IP",   "position": 1  },
-      { "param": "httpPort",    "variableRef": true, "variableName": "HTTP_SERVER_PORT",  "position": 2  },
-      { "param": "sender",      "variableRef": true, "variableName": "PHISHING_SENDER",   "position": 3  },
-      { "param": "targetList",  "variableRef": true, "variableName": "TARGET_LIST_PATH",  "position": 4  },
-      { "param": "emailHeader", "variableRef": true, "variableName": "EMAIL_SUBJECT",     "position": 5  },
-      { "param": "emailBody",   "variableRef": true, "variableName": "BODY_HTML_PATH",    "position": 6  },
-      { "param": "attachment",  "variableRef": true, "variableName": "EMAIL_ATTACHMENT",  "position": 7  },
-      { "param": "payloadName", "variableRef": true, "variableName": "PAYLOAD_NAME",      "position": 8  },
-      { "param": "emailServer", "variableRef": true, "variableName": "PHISHING_SERVER",   "position": 9  },
-      { "param": "emailPort",   "variableRef": true, "variableName": "PHISHING_PORT",     "position": 10 }
+      {
+        "param": "hostIp",
+        "variableRef": true,
+        "variableName": "HTTP_SERVER_IP",
+        "position": 1
+      },
+      {
+        "param": "httpPort",
+        "variableRef": true,
+        "variableName": "HTTP_SERVER_PORT",
+        "position": 2
+      },
+      {
+        "param": "sender",
+        "variableRef": true,
+        "variableName": "PHISHING_SENDER",
+        "position": 3
+      },
+      {
+        "param": "targetList",
+        "variableRef": true,
+        "variableName": "TARGET_LIST_PATH",
+        "position": 4
+      },
+      {
+        "param": "emailHeader",
+        "variableRef": true,
+        "variableName": "EMAIL_SUBJECT",
+        "position": 5
+      },
+      {
+        "param": "emailBody",
+        "variableRef": true,
+        "variableName": "BODY_HTML_PATH",
+        "position": 6
+      },
+      {
+        "param": "attachment",
+        "variableRef": true,
+        "variableName": "EMAIL_ATTACHMENT",
+        "position": 7
+      },
+      {
+        "param": "payloadName",
+        "variableRef": true,
+        "variableName": "PAYLOAD_NAME",
+        "position": 8
+      },
+      {
+        "param": "emailServer",
+        "variableRef": true,
+        "variableName": "PHISHING_SERVER",
+        "position": 9
+      },
+      {
+        "param": "emailPort",
+        "variableRef": true,
+        "variableName": "PHISHING_PORT",
+        "position": 10
+      }
     ],
     "variables": [
-      { "name": "HTTP_SERVER_IP",   "fromParam": "hostIp",      "default": "10.10.104.30",                   "scope": "suite" },
-      { "name": "HTTP_SERVER_PORT", "fromParam": "httpPort",    "default": "9008",                           "scope": "suite" },
-      { "name": "PHISHING_SENDER",  "fromParam": "sender",      "default": "it-support@company.com",         "scope": "suite" },
-      { "name": "TARGET_LIST_PATH", "fromParam": "targetList",  "default": "/home/bah/Projects/targets.txt", "scope": "suite" },
-      { "name": "EMAIL_SUBJECT",    "fromParam": "emailHeader", "default": "Security Update Required",       "scope": "suite" },
-      { "name": "BODY_HTML_PATH",   "fromParam": "emailBody",   "default": "/home/bah/Projects/body.html",   "scope": "suite" },
-      { "name": "EMAIL_ATTACHMENT", "fromParam": "attachment",  "default": "${EMPTY}",                       "scope": "suite" },
-      { "name": "PAYLOAD_NAME",     "fromParam": "payloadName", "default": "pca_update.exe",                 "scope": "suite" },
-      { "name": "PHISHING_SERVER",  "fromParam": "emailServer", "default": "10.0.0.25",                      "scope": "suite" },
-      { "name": "PHISHING_PORT",    "fromParam": "emailPort",   "default": "25",                             "scope": "suite" }
+      {
+        "name": "HTTP_SERVER_IP",
+        "fromParam": "hostIp",
+        "default": "10.10.104.30",
+        "scope": "suite"
+      },
+      {
+        "name": "HTTP_SERVER_PORT",
+        "fromParam": "httpPort",
+        "default": "9008",
+        "scope": "suite"
+      },
+      {
+        "name": "PHISHING_SENDER",
+        "fromParam": "sender",
+        "default": "it-support@company.com",
+        "scope": "suite"
+      },
+      {
+        "name": "TARGET_LIST_PATH",
+        "fromParam": "targetList",
+        "default": "/home/bah/Projects/targets.txt",
+        "scope": "suite"
+      },
+      {
+        "name": "EMAIL_SUBJECT",
+        "fromParam": "emailHeader",
+        "default": "Security Update Required",
+        "scope": "suite"
+      },
+      {
+        "name": "BODY_HTML_PATH",
+        "fromParam": "emailBody",
+        "default": "/home/bah/Projects/body.html",
+        "scope": "suite"
+      },
+      {
+        "name": "EMAIL_ATTACHMENT",
+        "fromParam": "attachment",
+        "default": "${EMPTY}",
+        "scope": "suite"
+      },
+      {
+        "name": "PAYLOAD_NAME",
+        "fromParam": "payloadName",
+        "default": "pca_update.exe",
+        "scope": "suite"
+      },
+      {
+        "name": "PHISHING_SERVER",
+        "fromParam": "emailServer",
+        "default": "10.0.0.25",
+        "scope": "suite"
+      },
+      {
+        "name": "PHISHING_PORT",
+        "fromParam": "emailPort",
+        "default": "25",
+        "scope": "suite"
+      }
     ],
     "isSuiteSetup": false,
-    "preKeywordLog":  "=== Launching Phishing Attack: ${EMAIL_SUBJECT} via ${PHISHING_SERVER}:${PHISHING_PORT} ===",
+    "preKeywordLog": "=== Launching Phishing Attack: ${EMAIL_SUBJECT} via ${PHISHING_SERVER}:${PHISHING_PORT} ===",
     "postKeywordLog": "=== Phishing Attack Complete ===",
-    "documentation": "Composite full phishing attack keyword — builds and sends in one step",
-    "tags": ["phishing", "initial-access", "composite"]
+    "documentation": "Composite full phishing attack keyword \u2014 builds and sends in one step",
+    "tags": [
+      "phishing",
+      "initial-access",
+      "composite"
+    ]
   }
 }

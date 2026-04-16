@@ -54,6 +54,11 @@ const MODULE_LIBRARIES: Record<string, string[]> = {
   'cs-kill-session':          ['cobaltstrikec2/cobaltstrike.py'],
   'brute-sim':                ['cobaltstrikec2/cobaltstrike.py'],
   'screenshot':               ['cobaltstrikec2/cobaltstrike.py'],
+  'ph-start-http-server': ['phishing/PhishingLibrary.py', 'phishing/HTTPLibrary.py'],
+  'ph-stop-http-server':  ['phishing/HTTPLibrary.py'],
+  'ph-create-email':      ['phishing/PhishingLibrary.py'],
+  'ph-send-email':        ['phishing/PhishingLibrary.py'],
+  'ph-launch-attack':     ['phishing/PhishingLibrary.py', 'phishing/HTTPLibrary.py'],
 };
 
 // ── Static library init args fallback ────────────────────────────────────────
