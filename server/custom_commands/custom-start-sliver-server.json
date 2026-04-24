@@ -1,0 +1,24 @@
+{
+  "_key": "custom-start-sliver-server",
+  "name": "Start Sliver Server",
+  "tactic": "TA0042",
+  "icon": "⚡",
+  "category": "Custom",
+  "subcategory": "",
+  "description": "",
+  "riskLevel": "medium",
+  "estimatedDuration": 30,
+  "executionType": "cobalt_strike",
+  "parameters": [],
+  "robotFramework": {
+    "libraries": [
+      "cobaltstrikec2/cobaltstrike.py"
+    ],
+    "keyword": "Start C2",
+    "keywordArgs": [],
+    "variables": []
+  },
+  "_authored_by": "operator",
+  "_authored_at": "2026-04-16T15:03:31.292304",
+  "isCustom": true
+}
