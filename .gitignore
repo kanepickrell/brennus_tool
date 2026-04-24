@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 server/campaigns/_autosave.lumen
+
+server/build/
+server/static/assets/
+*.zip
