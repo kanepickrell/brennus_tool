@@ -1,0 +1,68 @@
+{
+  "_key": "ph-go-phish",
+  "name": "Send Phishing Email",
+  "tactic": "TA0001",
+  "icon": "📧",
+  "description": "Build and send a phishing email via smtp-cli. Targets and attachments accept comma-separated lists or file paths.",
+  "executionType": "phishing",
+  "estimatedDuration": 10,
+  "inputs": [
+    { "id": "signal", "label": "Signal", "type": "signal", "required": false }
+  ],
+  "outputs": [
+    { "id": "sent", "label": "Email Sent", "type": "signal" }
+  ],
+  "parameters": [
+    { "id": "phishPath",   "label": "smtp-cli Path",      "type": "string", "required": true,  "placeholder": "/home/bah/Projects/automation-utilities/phishing/smtp-cli", "default": "${PHISH_PATH}" },
+    { "id": "server",      "label": "SMTP Server",        "type": "string", "required": true,  "placeholder": "10.0.0.25",                  "default": "${PHISHING_SERVER}" },
+    { "id": "port",        "label": "SMTP Port",          "type": "number", "required": true,  "placeholder": "25",                          "default": "${PHISHING_PORT}" },
+    { "id": "sender",      "label": "Sender Address",     "type": "string", "required": true,  "placeholder": "it-support@company.com",      "default": "${PHISHING_SENDER}" },
+    { "id": "subject",     "label": "Email Subject",      "type": "string", "required": true,  "placeholder": "Security Update Required",    "default": "${EMAIL_SUBJECT}" },
+    {
+      "id": "body",
+      "label": "Body Template",
+      "type": "select",
+      "required": true,
+      "options": [
+        "/home/bah/Projects/automation-utilities/server/phishing/bodies/it_security_update.html",
+        "/home/bah/Projects/automation-utilities/server/phishing/bodies/hr_benefits_enrollment.html"
+      ],
+      "default": "/home/bah/Projects/automation-utilities/server/phishing/bodies/it_security_update.html",
+      "description": "Pre-built HTML body template — pick one to use as the email body"
+    },
+    { "id": "targetList",  "label": "Targets",            "type": "string", "required": true,  "placeholder": "/path/to/targets.txt OR a@x.com,b@x.com", "default": "${TARGET_LIST}" },
+    { "id": "attachments", "label": "Attachments",        "type": "string", "required": false, "placeholder": "/path/to/file.pdf OR comma-separated", "default": "${EMAIL_ATTACHMENTS}" }
+  ],
+  "requirements": {
+    "c2Server": false,
+    "libraries": ["phishing/PhishingLibraryFunc.py"]
+  },
+  "robotFramework": {
+    "keyword": "Go Phish",
+    "libraries": ["phishing/PhishingLibraryFunc.py"],
+    "keywordArgs": [
+      { "param": "phishPath",   "variableRef": true, "variableName": "PHISH_PATH",        "position": 1 },
+      { "param": "server",      "variableRef": true, "variableName": "PHISHING_SERVER",   "position": 2 },
+      { "param": "port",        "variableRef": true, "variableName": "PHISHING_PORT",     "position": 3 },
+      { "param": "sender",      "variableRef": true, "variableName": "PHISHING_SENDER",   "position": 4 },
+      { "param": "subject",     "variableRef": true, "variableName": "EMAIL_SUBJECT",     "position": 5 },
+      { "param": "body",        "variableRef": true, "variableName": "EMAIL_BODY",        "position": 6 },
+      { "param": "targetList",  "variableRef": true, "variableName": "TARGET_LIST",       "position": 7 },
+      { "param": "attachments", "variableRef": true, "variableName": "EMAIL_ATTACHMENTS", "position": 8 }
+    ],
+    "variables": [
+      { "name": "PHISH_PATH",        "fromParam": "phishPath",   "default": "/home/bah/Projects/automation-utilities/phishing/smtp-cli", "scope": "suite" },
+      { "name": "PHISHING_SERVER",   "fromParam": "server",      "default": "10.0.0.25",                       "scope": "suite" },
+      { "name": "PHISHING_PORT",     "fromParam": "port",        "default": "25",                              "scope": "suite" },
+      { "name": "PHISHING_SENDER",   "fromParam": "sender",      "default": "it-support@company.com",          "scope": "suite" },
+      { "name": "EMAIL_SUBJECT",     "fromParam": "subject",     "default": "Security Update Required",        "scope": "suite" },
+      { "name": "EMAIL_BODY",        "fromParam": "body",        "default": "/home/bah/Projects/automation-utilities/server/phishing/bodies/it_security_update.html", "scope": "suite" },
+      { "name": "TARGET_LIST",       "fromParam": "targetList",  "default": "/home/bah/Projects/targets.txt",  "scope": "suite" },
+      { "name": "EMAIL_ATTACHMENTS", "fromParam": "attachments", "default": "${EMPTY}",                        "scope": "suite" }
+    ],
+    "preKeywordLog": "=== Sending Phishing Email: ${EMAIL_SUBJECT} via ${PHISHING_SERVER}:${PHISHING_PORT} ===",
+    "postKeywordLog": "=== Email Sent ===",
+    "documentation": "Send phishing email via go_phish (smtp-cli)",
+    "tags": ["phishing", "initial-access", "smtp"]
+  }
+}
