@@ -1,0 +1,46 @@
+{
+  "_key": "cs-issue-shell",
+  "name": "Run Shell Command",
+  "description": "Run a Windows shell command on the active beacon session",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 5,
+  "tactic": "TA0002",
+  "icon": "💻",
+  "inputs": [
+    { "id": "session", "label": "Beacon Session", "type": "session", "required": true }
+  ],
+  "outputs": [
+    { "id": "session", "label": "Beacon Session", "type": "session", "description": "Session passed through" }
+  ],
+  "parameters": [
+    {
+      "id": "command",
+      "label": "Shell Command",
+      "type": "text",
+      "required": true,
+      "placeholder": "tasklist /v",
+      "default": "whoami"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
+  },
+  "robotFramework": {
+    "keyword": "Issue Shell Cmd",
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
+    "captureOutput": "SHELL_OUTPUT",
+    "variables": [
+      { "name": "CURRENT_SESSION", "default": "0", "scope": "suite" },
+      { "name": "SHELL_COMMAND", "fromParam": "command", "default": "whoami", "scope": "suite" }
+    ],
+    "keywordArgs": [
+      { "param": "session", "position": 1, "sessionVariable": "CURRENT_SESSION" },
+      { "param": "command", "position": 2, "variableRef": true, "variableName": "SHELL_COMMAND" }
+    ],
+    "preKeywordLog": "=== Running shell command on beacon: ${SHELL_COMMAND} ===",
+    "postKeywordLog": "=== Shell command complete ===",
+    "documentation": "Run shell command on active beacon",
+    "tags": ["execution", "shell", "windows", "beacon"]
+  }
+}

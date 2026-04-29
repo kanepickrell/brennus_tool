@@ -1,0 +1,46 @@
+{
+  "_key": "cs-issue-powershell",
+  "name": "Run PowerShell Command",
+  "description": "Run a PowerShell command on the active beacon session",
+  "executionType": "cobalt_strike",
+  "estimatedDuration": 5,
+  "tactic": "TA0002",
+  "icon": "⚡",
+  "inputs": [
+    { "id": "session", "label": "Beacon Session", "type": "session", "required": true }
+  ],
+  "outputs": [
+    { "id": "session", "label": "Beacon Session", "type": "session", "description": "Session passed through" }
+  ],
+  "parameters": [
+    {
+      "id": "command",
+      "label": "PowerShell Command",
+      "type": "text",
+      "required": true,
+      "placeholder": "Compress-Archive -Path C:\\Users -DestinationPath C:\\Temp\\out.zip",
+      "default": "Get-Process"
+    }
+  ],
+  "requirements": {
+    "c2Server": true,
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"]
+  },
+  "robotFramework": {
+    "keyword": "Issue Powershell Cmd",
+    "libraries": ["cobaltstrikec2/cobaltstrike.py"],
+    "captureOutput": "PS_OUTPUT",
+    "variables": [
+      { "name": "CURRENT_SESSION", "default": "0", "scope": "suite" },
+      { "name": "PS_COMMAND", "fromParam": "command", "default": "Get-Process", "scope": "suite" }
+    ],
+    "keywordArgs": [
+      { "param": "session", "position": 1, "sessionVariable": "CURRENT_SESSION" },
+      { "param": "command", "position": 2, "variableRef": true, "variableName": "PS_COMMAND" }
+    ],
+    "preKeywordLog": "=== Running PowerShell on beacon: ${PS_COMMAND} ===",
+    "postKeywordLog": "=== PowerShell complete ===",
+    "documentation": "Run PowerShell command on active beacon",
+    "tags": ["execution", "powershell", "beacon"]
+  }
+}
